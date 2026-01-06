@@ -1,0 +1,1 @@
+src/components/AddAssetForm.tsx(2,25): error TS1484: 'AssetType' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
