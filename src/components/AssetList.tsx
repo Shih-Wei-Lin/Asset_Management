@@ -1,64 +1,73 @@
 import React from 'react'
 import { useAssetStore } from '../store/assetStore'
-import { Trash2, TrendingUp, TrendingDown } from 'lucide-react'
+import { Trash2, TrendingUp, TrendingDown, Bitcoin, Activity } from 'lucide-react'
 
 export const AssetList: React.FC = () => {
     const { assets, removeAsset } = useAssetStore()
 
     if (assets.length === 0) {
         return (
-            <div className="text-center py-12 text-zinc-500 dark:text-zinc-400">
-                <p className="mb-2">尚無資產</p>
-                <p className="text-sm">點擊按鈕新增您的第一筆資產</p>
+            <div className="glass-card p-12 text-center text-indigo-300/60 flex flex-col items-center justify-center">
+                <div className="bg-indigo-500/10 p-4 rounded-full mb-4">
+                    <Activity size={32} />
+                </div>
+                <p className="mb-2 text-lg font-medium text-white/80">No assets yet</p>
+                <p className="text-sm">Tap the + button to add your first asset</p>
             </div>
         )
     }
 
-    // Calculate total value (mock current price = buy price * 1.1 for demo until API connected)
-    // In real app, we would fetch current prices
-
     return (
-        <div className="space-y-4">
+        <div className="space-y-3 pb-8">
             {assets.map((asset) => {
                 const currentPrice = asset.buyPrice // TODO: Fetch real price
                 const totalValue = currentPrice * asset.amount
-                const profit = (currentPrice - asset.buyPrice) * asset.amount
-                const profitPercent = 0 // Mock
+                const profit = 0
+                const profitPercent = 0
 
                 return (
                     <div
                         key={asset.id}
-                        className="bg-white dark:bg-zinc-800 p-4 rounded-xl shadow-sm border border-zinc-100 dark:border-zinc-700 flex justify-between items-center"
+                        className="glass-card p-4 hover:bg-white/15 transition-colors duration-200 flex justify-between items-center group"
                     >
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="font-bold text-lg text-zinc-900 dark:text-white">{asset.symbol}</span>
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300">
-                                    {asset.type === 'crypto' ? 'Crypto' : 'Stock'}
-                                </span>
+                        <div className="flex items-center gap-4">
+                            {/* Icon Placeholder */}
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${asset.type === 'crypto' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'
+                                }`}>
+                                {asset.type === 'crypto' ? <Bitcoin size={20} /> : <Activity size={20} />}
                             </div>
-                            <p className="text-sm text-zinc-500 dark:text-zinc-400">{asset.name}</p>
-                            <div className="mt-2 text-xs text-zinc-400">
-                                持倉: {asset.amount.toLocaleString()} | 均價: ${asset.buyPrice.toLocaleString()}
+
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-base text-white">{asset.symbol}</span>
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/10 text-white/50 uppercase tracking-wider">
+                                        {asset.type}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-white/40 font-medium">{asset.amount.toLocaleString()} units</p>
                             </div>
                         </div>
 
                         <div className="text-right">
-                            <p className="font-bold text-lg text-zinc-900 dark:text-white">
+                            <p className="font-bold text-base text-white tracking-wide">
                                 ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                             </p>
-                            <div className={`flex items-center justify-end gap-1 text-sm ${profit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                {profit >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                            <div className={`flex items-center justify-end gap-1 text-xs font-medium ${profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {profit >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                                 <span>{profitPercent.toFixed(2)}%</span>
                             </div>
-                            <button
-                                onClick={() => removeAsset(asset.id)}
-                                className="mt-2 text-zinc-400 hover:text-red-500 p-1"
-                                aria-label="Remove asset"
-                            >
-                                <Trash2 size={16} />
-                            </button>
                         </div>
+
+                        {/* Delete Action (Hidden by default, visible on hover/focus) */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                if (confirm('Delete this asset?')) removeAsset(asset.id)
+                            }}
+                            className="absolute right-4 opacity-0 group-hover:opacity-100 p-2 bg-red-500/80 text-white rounded-lg transition-all translate-x-4 group-hover:translate-x-0 ml-4 shadow-lg"
+                        >
+                            <Trash2 size={16} />
+                        </button>
                     </div>
                 )
             })}

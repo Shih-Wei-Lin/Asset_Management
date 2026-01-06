@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useAssetStore, type AssetType } from '../store/assetStore'
-import { PlusCircle, X } from 'lucide-react'
+import { PlusCircle, X, Bitcoin, Briefcase } from 'lucide-react'
 
 interface AddAssetFormProps {
     onClose: () => void
@@ -29,102 +29,113 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white dark:bg-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-xl relative animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
+            {/* Backdrop */}
+            <div
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                onClick={onClose}
+            ></div>
+
+            {/* Modal Content */}
+            <div className="relative w-full max-w-md w-full glass-modal p-6 animate-in slide-in-from-bottom-10 fade-in duration-300">
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                    className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors"
                 >
                     <X size={24} />
                 </button>
 
-                <h2 className="text-2xl font-bold mb-6 text-zinc-900 dark:text-white">新增資產</h2>
+                <h2 className="text-2xl font-bold mb-8 text-white gradient-text">Add New Asset</h2>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">類型</label>
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setType('crypto')}
-                                className={`flex-1 py-2 rounded-lg font-medium transition-colors ${type === 'crypto'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
-                                    }`}
-                            >
-                                加密貨幣
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setType('stock')}
-                                className={`flex-1 py-2 rounded-lg font-medium transition-colors ${type === 'stock'
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
-                                    }`}
-                            >
-                                股票
-                            </button>
-                        </div>
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    {/* Asset Type Selector */}
+                    <div className="grid grid-cols-2 gap-3 p-1 bg-black/20 rounded-xl">
+                        <button
+                            type="button"
+                            onClick={() => setType('crypto')}
+                            className={`flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-all ${type === 'crypto'
+                                    ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg'
+                                    : 'text-white/40 hover:text-white/70'
+                                }`}
+                        >
+                            <Bitcoin size={18} />
+                            Crypto
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setType('stock')}
+                            className={`flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-all ${type === 'stock'
+                                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                                    : 'text-white/40 hover:text-white/70'
+                                }`}
+                        >
+                            <Briefcase size={18} />
+                            Stocks
+                        </button>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">名稱</label>
-                        <input
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder={type === 'crypto' ? 'Bitcoin' : 'Apple Inc.'}
-                            className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                            required
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">代號</label>
-                        <input
-                            type="text"
-                            value={symbol}
-                            onChange={(e) => setSymbol(e.target.value)}
-                            placeholder={type === 'crypto' ? 'BTC' : 'AAPL'}
-                            className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                            required
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">持有數量</label>
+                            <label className="block text-xs font-semibold text-indigo-200/50 uppercase tracking-wider mb-1.5 ml-1">Asset Name</label>
                             <input
-                                type="number"
-                                step="any"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                placeholder="0.00"
-                                className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder={type === 'crypto' ? 'e.g. Bitcoin' : 'e.g. Apple Inc.'}
+                                className="glass-input"
                                 required
                             />
                         </div>
+
                         <div>
-                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">購買價格 (單價)</label>
+                            <label className="block text-xs font-semibold text-indigo-200/50 uppercase tracking-wider mb-1.5 ml-1">Symbol / Ticker</label>
                             <input
-                                type="number"
-                                step="any"
-                                value={buyPrice}
-                                onChange={(e) => setBuyPrice(e.target.value)}
-                                placeholder="0.00"
-                                className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                type="text"
+                                value={symbol}
+                                onChange={(e) => setSymbol(e.target.value)}
+                                placeholder={type === 'crypto' ? 'e.g. BTC' : 'e.g. AAPL'}
+                                className="glass-input uppercase"
                                 required
                             />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-indigo-200/50 uppercase tracking-wider mb-1.5 ml-1">Quantity</label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    placeholder="0.00"
+                                    className="glass-input"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-indigo-200/50 uppercase tracking-wider mb-1.5 ml-1">Buy Price ($)</label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    value={buyPrice}
+                                    onChange={(e) => setBuyPrice(e.target.value)}
+                                    placeholder="0.00"
+                                    className="glass-input"
+                                    required
+                                />
+                            </div>
                         </div>
                     </div>
 
                     <button
                         type="submit"
-                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg flex items-center justify-center gap-2 transition-colors mt-6"
+                        className="glass-button flex items-center justify-center gap-2 mt-8 group"
                     >
-                        <PlusCircle size={20} />
-                        新增資產
+                        <PlusCircle size={20} className="group-hover:scale-110 transition-transform" />
+                        Add to Portfolio
                     </button>
+
+                    <div className="h-4"></div> {/* Bottom Spacer */}
                 </form>
             </div>
         </div>
