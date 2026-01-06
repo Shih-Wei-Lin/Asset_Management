@@ -105,7 +105,7 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
                     <X size={24} />
                 </button>
 
-                <h2 className="text-2xl font-bold mb-8 text-white gradient-text">Add New Asset</h2>
+                <h2 className="text-2xl font-bold mb-8 text-white gradient-text">新增資產</h2>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {/* Asset Type Selector */}
@@ -119,7 +119,7 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
                                 }`}
                         >
                             <Bitcoin size={18} />
-                            Crypto
+                            加密貨幣
                         </button>
                         <button
                             type="button"
@@ -130,20 +130,20 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
                                 }`}
                         >
                             <Briefcase size={18} />
-                            Stocks
+                            股票
                         </button>
                     </div>
 
                     {/* Coin Search (Crypto Only) */}
                     {type === 'crypto' && (
                         <div className="relative z-20">
-                            <label className="block text-xs font-semibold text-indigo-200/50 uppercase tracking-wider mb-1.5 ml-1">Search Coin</label>
+                            <label className="block text-xs font-semibold text-indigo-200/50 uppercase tracking-wider mb-1.5 ml-1">搜尋幣種</label>
                             <div className="relative">
                                 <input
                                     type="text"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="Search (e.g. Bitcoin)"
+                                    placeholder="輸入幣種名稱 (如 Bitcoin)"
                                     className="glass-input pl-10"
                                     onFocus={() => searchQuery.length >= 2 && searchResults.length > 0 && setShowResults(true)}
                                     onBlur={() => setTimeout(() => setShowResults(false), 200)}
@@ -179,7 +179,7 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
                         {/* Name Field Removed */}
 
                         <div>
-                            <label className="block text-xs font-semibold text-indigo-200/50 uppercase tracking-wider mb-1.5 ml-1">Symbol / Ticker</label>
+                            <label className="block text-xs font-semibold text-indigo-200/50 uppercase tracking-wider mb-1.5 ml-1">代號</label>
                             <div className="relative">
                                 <input
                                     type="text"
