@@ -1,18 +1,21 @@
 import React from 'react'
 import { useAssetStore } from '../store/assetStore'
 import { Trash2, TrendingUp, TrendingDown, Bitcoin, Activity } from 'lucide-react'
+import { formatCurrency } from '../utils/format'
 
 export const AssetList: React.FC = () => {
-    const { assets, removeAsset, prices } = useAssetStore()
+    const { assets, removeAsset, prices, preferredCurrency, exchangeRate } = useAssetStore()
 
     if (assets.length === 0) {
+        // ... (empty state same)
         return (
             <div className="glass-card p-12 text-center text-indigo-300/60 flex flex-col items-center justify-center">
+                {/* ... */}
                 <div className="bg-indigo-500/10 p-4 rounded-full mb-4">
                     <Activity size={32} />
                 </div>
-                <p className="mb-2 text-lg font-medium text-white/80">No assets yet</p>
-                <p className="text-sm">Tap the + button to add your first asset</p>
+                <p className="mb-2 text-lg font-medium text-white/80">還沒有資產</p>
+                <p className="text-sm">點擊右下角的 + 按鈕來新增你的第一筆資產</p>
             </div>
         )
     }
@@ -21,22 +24,48 @@ export const AssetList: React.FC = () => {
         <div className="space-y-3 pb-8">
             {assets.map((asset) => {
                 const priceKey = asset.type === 'crypto' ? asset.apiId : asset.symbol
-                const currentPrice = (priceKey && prices[priceKey])
+                const rawPrice = (priceKey && prices[priceKey])
                     ? prices[priceKey]
                     : (asset.buyPrice ?? 0)
-                const totalValue = currentPrice * asset.amount
-                const profit = asset.buyPrice ? (currentPrice - asset.buyPrice) * asset.amount : 0
-                const profitPercent = asset.buyPrice && asset.buyPrice !== 0 ? (profit / (asset.buyPrice * asset.amount)) * 100 : 0
 
-                // Currency check
-                const isTWD = asset.type === 'stock' && asset.symbol.endsWith('.TW')
-                const currencySymbol = isTWD ? 'NT$' : '$'
+                // Determine Raw Value in USD
+                let valueUSD = rawPrice * asset.amount
+                if (asset.type === 'stock' && asset.symbol.endsWith('.TW')) {
+                    valueUSD = valueUSD / exchangeRate
+                }
+
+                // Final Display Value
+                const displayValue = preferredCurrency === 'USD'
+                    ? valueUSD
+                    : valueUSD * exchangeRate
+
+                // Profit Calc (Simplified for POC - strictly comparing current vs buy in ONE currency)
+                // Note: This needs buyPrice currency metadata to be 100% accurate across currencies.
+                // For now assuming buyPrice entered matches the asset's native currency.
+
+                let profit = 0
+                let profitPercent = 0
+
+                if (asset.buyPrice) {
+                    // Convert Buy Price to USD for uniform calc
+                    let buyPriceUSD = asset.buyPrice
+                    if (asset.type === 'stock' && asset.symbol.endsWith('.TW')) {
+                        buyPriceUSD = asset.buyPrice / exchangeRate
+                    }
+
+                    const totalBuyUSD = buyPriceUSD * asset.amount
+                    const diffUSD = valueUSD - totalBuyUSD
+
+                    profit = preferredCurrency === 'USD' ? diffUSD : diffUSD * exchangeRate
+                    profitPercent = (diffUSD / totalBuyUSD) * 100
+                }
 
                 return (
                     <div
                         key={asset.id}
                         className="glass-card p-4 hover:bg-white/15 transition-colors duration-200 flex justify-between items-center group"
                     >
+                        {/* ... (Icon & Name section same) */}
                         <div className="flex items-center gap-4">
                             {/* Icon Placeholder */}
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${asset.type === 'crypto' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'
@@ -51,13 +80,13 @@ export const AssetList: React.FC = () => {
                                         {asset.type}
                                     </span>
                                 </div>
-                                <p className="text-xs text-white/40 font-medium">{asset.amount.toLocaleString()} units</p>
+                                <p className="text-xs text-white/40 font-medium">{asset.amount.toLocaleString()} 單位</p>
                             </div>
                         </div>
 
                         <div className="text-right">
                             <p className="font-bold text-base text-white tracking-wide">
-                                {currencySymbol}{totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                {formatCurrency(displayValue, preferredCurrency)}
                             </p>
                             <div className={`flex items-center justify-end gap-1 text-xs font-medium ${profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                 {profit >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}

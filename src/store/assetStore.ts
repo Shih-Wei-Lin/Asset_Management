@@ -18,27 +18,53 @@ interface AssetStore {
     assets: Asset[]
     prices: Record<string, number> // Map of apiId -> current price
     exchangeRate: number // USD to TWD
+    preferredCurrency: 'USD' | 'TWD'
     addAsset: (asset: Omit<Asset, 'id' | 'dateAdded'>) => void
     removeAsset: (id: string) => void
     updateAsset: (id: string, updates: Partial<Asset>) => void
     setPrices: (newPrices: Record<string, number>) => void
     setExchangeRate: (rate: number) => void
+    setPreferredCurrency: (currency: 'USD' | 'TWD') => void
 }
 
 export const useAssetStore = create<AssetStore>()(
     persist(
         (set) => ({
             assets: [],
-            prices: {}, \n            exchangeRate: 32.5, // Default backup
-            addAsset: (asset) => set((state) => ({ \n                assets: [\n                    ...state.assets, \n                    { \n                        ...asset, \n                        id: crypto.randomUUID(), \n                        dateAdded: new Date().toISOString(), \n }, \n], \n })),
-            removeAsset: (id) => set((state) => ({ \n                assets: state.assets.filter((a) => a.id !== id), \n })),
-            updateAsset: (id, updates) => set((state) => ({ \n                assets: state.assets.map((a) => \n                    a.id === id ? { ...a, ...updates } : a\n), \n })),
-            setPrices: (newPrices) => set((state) => ({ \n                prices: { ...state.prices, ...newPrices }\n })),
+            prices: {},
+            exchangeRate: 32.5, // Default backup
+            preferredCurrency: 'USD',
+            addAsset: (asset) => set((state) => ({
+                assets: [
+                    ...state.assets,
+                    {
+                        ...asset,
+                        id: crypto.randomUUID(),
+                        dateAdded: new Date().toISOString(),
+                    },
+                ],
+            })),
+            removeAsset: (id) => set((state) => ({
+                assets: state.assets.filter((a) => a.id !== id),
+            })),
+            updateAsset: (id, updates) => set((state) => ({
+                assets: state.assets.map((a) =>
+                    a.id === id ? { ...a, ...updates } : a
+                ),
+            })),
+            setPrices: (newPrices) => set((state) => ({
+                prices: { ...state.prices, ...newPrices }
+            })),
             setExchangeRate: (rate) => set(() => ({ exchangeRate: rate })),
+            setPreferredCurrency: (currency) => set(() => ({ preferredCurrency: currency })),
         }),
         {
             name: 'asset-storage',
-            partialize: (state) => ({ assets: state.assets, exchangeRate: state.exchangeRate }), // Persist rate too
+            partialize: (state) => ({
+                assets: state.assets,
+                exchangeRate: state.exchangeRate,
+                preferredCurrency: state.preferredCurrency
+            }),
         }
     )
 )

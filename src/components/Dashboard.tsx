@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react'
 import { Plus, Wallet, TrendingUp, RefreshCw } from 'lucide-react'
 import { AddAssetForm } from './AddAssetForm'
 import { AssetList } from './AssetList'
+import { PortfolioChart } from './PortfolioChart'
+import { AllocationChart } from './AllocationChart'
 import { useAssetStore } from '../store/assetStore'
 import { getPrices } from '../services/coingecko'
 import { getStockPrices, getExchangeRate } from '../services/yahooFinance'
 
 export const Dashboard: React.FC = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-    const { assets, prices, setPrices, exchangeRate, setExchangeRate } = useAssetStore()
+    const { assets, prices, setPrices, exchangeRate, setExchangeRate, preferredCurrency, setPreferredCurrency } = useAssetStore()
     const [isRefreshing, setIsRefreshing] = useState(false)
 
     const fetchPrices = async () => {
@@ -44,8 +46,8 @@ export const Dashboard: React.FC = () => {
         return () => clearInterval(interval)
     }, [assets.length]) // Refetch when assets change
 
-    // Calculate total portfolio value (in USD)
-    const totalValue = assets.reduce((sum, asset) => {
+    // Calculate total portfolio value (in USD first)
+    const totalValueUSD = assets.reduce((sum, asset) => {
         const priceKey = asset.type === 'crypto' ? asset.apiId : asset.symbol
         const price = (priceKey && prices[priceKey])
             ? prices[priceKey]
@@ -60,6 +62,11 @@ export const Dashboard: React.FC = () => {
         return sum + valueUSD
     }, 0)
 
+    // Final display value based on preference
+    const displayValue = preferredCurrency === 'USD'
+        ? totalValueUSD
+        : totalValueUSD * exchangeRate
+
     // Calculate mock daily change (purely aesthetic for now)
     const isPositive = true
     const dailyChangePercent = 2.54
@@ -72,12 +79,21 @@ export const Dashboard: React.FC = () => {
                     <div className="bg-indigo-500/20 p-2 rounded-lg backdrop-blur-sm">
                         <Wallet className="text-indigo-400" size={24} />
                     </div>
-                    <span className="font-bold text-lg tracking-wide text-white/90">MyAssets</span>
+                    <span className="font-bold text-lg tracking-wide text-white/90">我的資產</span>
                     {isRefreshing && (
                         <RefreshCw size={16} className="text-white/40 animate-spin ml-2" />
                     )}
                 </div>
-                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 border-2 border-white/20"></div>
+                {/* Currency Toggle */}
+                <button
+                    onClick={() => setPreferredCurrency(preferredCurrency === 'USD' ? 'TWD' : 'USD')}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                >
+                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white">
+                        {preferredCurrency === 'USD' ? '$' : 'NT'}
+                    </div>
+                    <span className="text-xs font-semibold text-white/80">{preferredCurrency}</span>
+                </button>
             </div>
 
             {/* Hero Card / Total Balance */}
@@ -87,9 +103,10 @@ export const Dashboard: React.FC = () => {
                 <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/30 rounded-full blur-3xl group-hover:bg-blue-500/40 transition-all duration-700"></div>
 
                 <div className="relative z-10">
-                    <p className="text-indigo-200 text-sm font-medium mb-1">Total Portfolio Value</p>
+                    <p className="text-indigo-200 text-sm font-medium mb-1">總資產 ({preferredCurrency})</p>
                     <h1 className="text-4xl font-bold text-white mb-4 tracking-tight">
-                        ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {preferredCurrency === 'USD' ? '$' : 'NT$'}
+                        {displayValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                     </h1>
 
                     <div className="flex items-center gap-2 bg-white/5 w-fit px-3 py-1.5 rounded-full border border-white/5">
@@ -97,14 +114,20 @@ export const Dashboard: React.FC = () => {
                         <span className={`text-sm font-semibold ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
                             +{dailyChangePercent}%
                         </span>
-                        <span className="text-xs text-white/40 ml-1">Today</span>
+                        <span className="text-xs text-white/40 ml-1">今日</span>
                     </div>
                 </div>
             </div>
 
+            {/* Portfolio Chart */}
+            <PortfolioChart />
+
+            {/* Allocation Chart */}
+            <AllocationChart />
+
             {/* Actions */}
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-white/90">Your Assets</h2>
+                <h2 className="text-xl font-bold text-white/90">資產清單</h2>
                 {/* <button className="text-sm text-indigo-300 hover:text-indigo-200 transition-colors">See All</button> */}
             </div>
 
