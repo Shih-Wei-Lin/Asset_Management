@@ -3,7 +3,7 @@ import { useAssetStore } from '../store/assetStore'
 import { Trash2, TrendingUp, TrendingDown, Bitcoin, Activity } from 'lucide-react'
 
 export const AssetList: React.FC = () => {
-    const { assets, removeAsset } = useAssetStore()
+    const { assets, removeAsset, prices } = useAssetStore()
 
     if (assets.length === 0) {
         return (
@@ -20,10 +20,17 @@ export const AssetList: React.FC = () => {
     return (
         <div className="space-y-3 pb-8">
             {assets.map((asset) => {
-                const currentPrice = asset.buyPrice // TODO: Fetch real price
+                const priceKey = asset.type === 'crypto' ? asset.apiId : asset.symbol
+                const currentPrice = (priceKey && prices[priceKey])
+                    ? prices[priceKey]
+                    : (asset.buyPrice ?? 0)
                 const totalValue = currentPrice * asset.amount
-                const profit = 0
-                const profitPercent = 0
+                const profit = asset.buyPrice ? (currentPrice - asset.buyPrice) * asset.amount : 0
+                const profitPercent = asset.buyPrice && asset.buyPrice !== 0 ? (profit / (asset.buyPrice * asset.amount)) * 100 : 0
+
+                // Currency check
+                const isTWD = asset.type === 'stock' && asset.symbol.endsWith('.TW')
+                const currencySymbol = isTWD ? 'NT$' : '$'
 
                 return (
                     <div
@@ -50,13 +57,14 @@ export const AssetList: React.FC = () => {
 
                         <div className="text-right">
                             <p className="font-bold text-base text-white tracking-wide">
-                                ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                {currencySymbol}{totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                             </p>
                             <div className={`flex items-center justify-end gap-1 text-xs font-medium ${profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                 {profit >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                                 <span>{profitPercent.toFixed(2)}%</span>
                             </div>
                         </div>
+
 
                         {/* Delete Action (Hidden by default, visible on hover/focus) */}
                         <button

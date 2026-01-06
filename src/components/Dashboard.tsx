@@ -1,16 +1,63 @@
-import React, { useState } from 'react'
-import { Plus, Wallet, TrendingUp } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Plus, Wallet, TrendingUp, RefreshCw } from 'lucide-react'
 import { AddAssetForm } from './AddAssetForm'
 import { AssetList } from './AssetList'
 import { useAssetStore } from '../store/assetStore'
+import { getPrices } from '../services/coingecko'
+import { getStockPrices, getExchangeRate } from '../services/yahooFinance'
 
 export const Dashboard: React.FC = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-    const assets = useAssetStore((state) => state.assets)
+    const { assets, prices, setPrices, exchangeRate, setExchangeRate } = useAssetStore()
+    const [isRefreshing, setIsRefreshing] = useState(false)
 
-    // Calculate total portfolio value
+    const fetchPrices = async () => {
+        setIsRefreshing(true)
+
+        // 0. Fetch Exchange Rate
+        const rate = await getExchangeRate()
+        setExchangeRate(rate)
+
+        // 1. Fetch Crypto Prices
+        const cryptoIds = assets
+            .filter(a => a.type === 'crypto' && a.apiId)
+            .map(a => a.apiId as string)
+
+        const cryptoPrices = cryptoIds.length > 0 ? await getPrices(cryptoIds) : {}
+
+        // 2. Fetch Stock Prices
+        const stockSymbols = assets
+            .filter(a => a.type === 'stock')
+            .map(a => a.symbol)
+
+        const stockPrices = stockSymbols.length > 0 ? await getStockPrices(stockSymbols) : {}
+
+        // 3. Merge and Update Store
+        setPrices({ ...cryptoPrices, ...stockPrices })
+        setIsRefreshing(false)
+    }
+
+    // Initial fetch and periodic update (every 60s)
+    useEffect(() => {
+        fetchPrices()
+        const interval = setInterval(fetchPrices, 60000)
+        return () => clearInterval(interval)
+    }, [assets.length]) // Refetch when assets change
+
+    // Calculate total portfolio value (in USD)
     const totalValue = assets.reduce((sum, asset) => {
-        return sum + (asset.buyPrice * asset.amount)
+        const priceKey = asset.type === 'crypto' ? asset.apiId : asset.symbol
+        const price = (priceKey && prices[priceKey])
+            ? prices[priceKey]
+            : (asset.buyPrice ?? 0)
+
+        // If it's a Taiwan stock (symbol ends with .TW), convert TWD to USD
+        let valueUSD = price * asset.amount
+        if (asset.type === 'stock' && asset.symbol.endsWith('.TW')) {
+            valueUSD = valueUSD / exchangeRate
+        }
+
+        return sum + valueUSD
     }, 0)
 
     // Calculate mock daily change (purely aesthetic for now)
@@ -26,6 +73,9 @@ export const Dashboard: React.FC = () => {
                         <Wallet className="text-indigo-400" size={24} />
                     </div>
                     <span className="font-bold text-lg tracking-wide text-white/90">MyAssets</span>
+                    {isRefreshing && (
+                        <RefreshCw size={16} className="text-white/40 animate-spin ml-2" />
+                    )}
                 </div>
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-indigo-500 border-2 border-white/20"></div>
             </div>
