@@ -1,42 +1,66 @@
 import React, { useState, useEffect } from 'react'
-import { Plus, Wallet, TrendingUp, RefreshCw } from 'lucide-react'
+import { Plus, Wallet, TrendingUp, RefreshCw, AlertCircle } from 'lucide-react'
 import { AddAssetForm } from './AddAssetForm'
 import { AssetList } from './AssetList'
 import { PortfolioChart } from './PortfolioChart'
 import { AllocationChart } from './AllocationChart'
-import { useAssetStore } from '../store/assetStore'
+import { useAssetStore, selectTotalValue } from '../store/assetStore'
 import { getPrices } from '../services/coingecko'
 import { getStockPrices, getExchangeRate } from '../services/yahooFinance'
 
+
 export const Dashboard: React.FC = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-    const { assets, prices, setPrices, exchangeRate, setExchangeRate, preferredCurrency, setPreferredCurrency } = useAssetStore()
+    const {
+        assets,
+        prices,
+        setPrices,
+        exchangeRate,
+        setExchangeRate,
+        preferredCurrency,
+        setPreferredCurrency,
+        lastUpdated,
+        error,
+        setLastUpdated,
+        setError
+    } = useAssetStore()
     const [isRefreshing, setIsRefreshing] = useState(false)
+
+    // Use selector for consistent total value calculation
+    const displayValue = selectTotalValue({ assets, prices, exchangeRate, preferredCurrency, lastUpdated, error, addAsset: () => { }, removeAsset: () => { }, updateAsset: () => { }, setPrices: () => { }, setExchangeRate: () => { }, setPreferredCurrency: () => { }, setLastUpdated: () => { }, setError: () => { } })
 
     const fetchPrices = async () => {
         setIsRefreshing(true)
+        setError(null)
 
-        // 0. Fetch Exchange Rate
-        const rate = await getExchangeRate()
-        setExchangeRate(rate)
+        try {
+            // 0. Fetch Exchange Rate
+            const rate = await getExchangeRate()
+            setExchangeRate(rate)
 
-        // 1. Fetch Crypto Prices
-        const cryptoIds = assets
-            .filter(a => a.type === 'crypto' && a.apiId)
-            .map(a => a.apiId as string)
+            // 1. Fetch Crypto Prices
+            const cryptoIds = assets
+                .filter(a => a.type === 'crypto' && a.apiId)
+                .map(a => a.apiId as string)
 
-        const cryptoPrices = cryptoIds.length > 0 ? await getPrices(cryptoIds) : {}
+            const cryptoPrices = cryptoIds.length > 0 ? await getPrices(cryptoIds) : {}
 
-        // 2. Fetch Stock Prices
-        const stockSymbols = assets
-            .filter(a => a.type === 'stock')
-            .map(a => a.symbol)
+            // 2. Fetch Stock Prices
+            const stockSymbols = assets
+                .filter(a => a.type === 'stock')
+                .map(a => a.symbol)
 
-        const stockPrices = stockSymbols.length > 0 ? await getStockPrices(stockSymbols) : {}
+            const stockPrices = stockSymbols.length > 0 ? await getStockPrices(stockSymbols) : {}
 
-        // 3. Merge and Update Store
-        setPrices({ ...cryptoPrices, ...stockPrices })
-        setIsRefreshing(false)
+            // 3. Merge and Update Store
+            setPrices({ ...cryptoPrices, ...stockPrices })
+            setLastUpdated(Date.now())
+        } catch (err) {
+            console.error('Failed to update prices:', err)
+            setError('Failed to update prices. Using cached data.')
+        } finally {
+            setIsRefreshing(false)
+        }
     }
 
     // Initial fetch and periodic update (every 60s)
@@ -44,28 +68,7 @@ export const Dashboard: React.FC = () => {
         fetchPrices()
         const interval = setInterval(fetchPrices, 60000)
         return () => clearInterval(interval)
-    }, [assets.length]) // Refetch when assets change
-
-    // Calculate total portfolio value (in USD first)
-    const totalValueUSD = assets.reduce((sum, asset) => {
-        const priceKey = asset.type === 'crypto' ? asset.apiId : asset.symbol
-        const price = (priceKey && prices[priceKey])
-            ? prices[priceKey]
-            : (asset.buyPrice ?? 0)
-
-        // If it's a Taiwan stock (symbol ends with .TW), convert TWD to USD
-        let valueUSD = price * asset.amount
-        if (asset.type === 'stock' && asset.symbol.endsWith('.TW')) {
-            valueUSD = valueUSD / exchangeRate
-        }
-
-        return sum + valueUSD
-    }, 0)
-
-    // Final display value based on preference
-    const displayValue = preferredCurrency === 'USD'
-        ? totalValueUSD
-        : totalValueUSD * exchangeRate
+    }, [assets.length])
 
     // Calculate mock daily change (purely aesthetic for now)
     const isPositive = true
@@ -74,26 +77,43 @@ export const Dashboard: React.FC = () => {
     return (
         <div className="min-h-screen pb-24 px-4 sm:px-6 lg:px-8 max-w-lg mx-auto">
             {/* Header / Top Bar */}
-            <div className="flex justify-between items-center py-6">
-                <div className="flex items-center gap-2">
-                    <div className="bg-indigo-500/20 p-2 rounded-lg backdrop-blur-sm">
-                        <Wallet className="text-indigo-400" size={24} />
+            <div className="flex flex-col gap-4 py-6">
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-indigo-500/20 p-2 rounded-lg backdrop-blur-sm">
+                            <Wallet className="text-indigo-400" size={24} />
+                        </div>
+                        <div>
+                            <span className="font-bold text-lg tracking-wide text-white/90">我的資產</span>
+                            {lastUpdated && (
+                                <p className="text-[10px] text-white/40">
+                                    Update: {new Date(lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                            )}
+                        </div>
+                        {isRefreshing && (
+                            <RefreshCw size={14} className="text-white/40 animate-spin ml-1" />
+                        )}
                     </div>
-                    <span className="font-bold text-lg tracking-wide text-white/90">我的資產</span>
-                    {isRefreshing && (
-                        <RefreshCw size={16} className="text-white/40 animate-spin ml-2" />
-                    )}
+                    {/* Currency Toggle */}
+                    <button
+                        onClick={() => setPreferredCurrency(preferredCurrency === 'USD' ? 'TWD' : 'USD')}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                    >
+                        <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white">
+                            {preferredCurrency === 'USD' ? '$' : 'NT'}
+                        </div>
+                        <span className="text-xs font-semibold text-white/80">{preferredCurrency}</span>
+                    </button>
                 </div>
-                {/* Currency Toggle */}
-                <button
-                    onClick={() => setPreferredCurrency(preferredCurrency === 'USD' ? 'TWD' : 'USD')}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-                >
-                    <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white">
-                        {preferredCurrency === 'USD' ? '$' : 'NT'}
+
+                {/* Error Banner */}
+                {error && (
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-center gap-2 text-red-200 text-xs animate-fade-in">
+                        <AlertCircle size={14} className="shrink-0" />
+                        <span>{error}</span>
                     </div>
-                    <span className="text-xs font-semibold text-white/80">{preferredCurrency}</span>
-                </button>
+                )}
             </div>
 
             {/* Hero Card / Total Balance */}
