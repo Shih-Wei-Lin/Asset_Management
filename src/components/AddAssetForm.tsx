@@ -195,7 +195,7 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
                                 {/* Market Indicator */}
                                 {type === 'stock' && symbol && (
                                     <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold px-2 py-1 rounded bg-white/10 text-white/60">
-                                        {/^\d{4}$/.test(symbol) ? 'TW Stock' : /^[a-zA-Z]+$/.test(symbol) ? 'US Stock' : 'Unknown'}
+                                        {/^\d{4,6}$/.test(symbol) ? '🇹🇼 台股' : /^[a-zA-Z]+$/.test(symbol) ? '🇺🇸 美股' : 'Unknown'}
                                     </div>
                                 )}
                             </div>
