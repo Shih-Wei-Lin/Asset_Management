@@ -49,8 +49,8 @@ export const PortfolioChart: React.FC = () => {
                 if (primaryAsset.type === 'crypto' && primaryAsset.apiId) {
                     rawData = await getMarketChart(primaryAsset.apiId, days)
                 } else if (primaryAsset.type === 'stock') {
-                    // Map our range to Yahoo's format
-                    const yahooRange = range === '1W' ? '1mo' : range === '1M' ? '1mo' : '1y'
+                    // Map our range to Yahoo's format: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
+                    const yahooRange = range === '1W' ? '5d' : range === '1M' ? '1mo' : '1y'
                     rawData = await getStockChart(primaryAsset.symbol, yahooRange)
                 }
 
