@@ -57,8 +57,8 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
         setSymbol(value)
 
         if (type === 'stock') {
-            // 4 digits = Taiwan Stock
-            if (/^\d{4}$/.test(value)) {
+            // 4-6 digits = Taiwan Stock (includes ETFs like 00878)
+            if (/^\d{4,6}$/.test(value)) {
                 // You could add a visual indicator here if you had a state for it
                 // For now, we'll just handle the logic at submit or maybe render a badge?
             }
@@ -72,8 +72,8 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
 
         let finalSymbol = symbol.toUpperCase()
 
-        // Auto-append .TW for Taiwan stocks (4 digits)
-        if (type === 'stock' && /^\d{4}$/.test(finalSymbol)) {
+        // Auto-append .TW for Taiwan stocks (4-6 digits, e.g. 2330, 00878)
+        if (type === 'stock' && /^\d{4,6}$/.test(finalSymbol)) {
             finalSymbol = `${finalSymbol}.TW`
         }
 
