@@ -67,11 +67,25 @@ export const AssetList: React.FC = () => {
                     >
                         {/* ... (Icon & Name section same) */}
                         <div className="flex items-center gap-4">
-                            {/* Icon Placeholder */}
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${asset.type === 'crypto' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'
-                                }`}>
-                                {asset.type === 'crypto' ? <Bitcoin size={20} /> : <Activity size={20} />}
-                            </div>
+                            {/* Asset Icon - Use thumb for crypto, flag for stock */}
+                            {asset.thumb ? (
+                                <img
+                                    src={asset.thumb}
+                                    alt={asset.symbol}
+                                    className="w-10 h-10 rounded-full"
+                                />
+                            ) : (
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${asset.type === 'crypto' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'
+                                    }`}>
+                                    {asset.type === 'crypto' ? <Bitcoin size={20} /> : (
+                                        asset.symbol.endsWith('.TW') ? (
+                                            <span className="text-xs font-bold">🇹🇼</span>
+                                        ) : (
+                                            <span className="text-xs font-bold">🇺🇸</span>
+                                        )
+                                    )}
+                                </div>
+                            )}
 
                             <div>
                                 <div className="flex items-center gap-2">

@@ -15,6 +15,7 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
     const [amount, setAmount] = useState('')
     const [buyPrice, setBuyPrice] = useState('')
     const [apiId, setApiId] = useState<string | undefined>(undefined)
+    const [thumb, setThumb] = useState<string | undefined>(undefined)
 
     // Search State
     const [searchQuery, setSearchQuery] = useState('')
@@ -45,6 +46,7 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
         setName(coin.name)
         setSymbol(coin.symbol.toUpperCase())
         setApiId(coin.id)
+        setThumb(coin.thumb)
         setSearchQuery('')
         setShowResults(false)
     }
@@ -83,7 +85,8 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
             type,
             amount: parseFloat(amount),
             buyPrice: buyPrice ? parseFloat(buyPrice) : undefined,
-            apiId: type === 'crypto' ? apiId : undefined
+            apiId: type === 'crypto' ? apiId : undefined,
+            thumb: type === 'crypto' ? thumb : undefined
         })
         onClose()
     }

@@ -12,6 +12,8 @@ export interface Asset {
     buyPrice?: number
     dateAdded: string
     apiId?: string // CoinGecko ID (e.g. 'bitcoin')
+    note?: string  // User note for this asset
+    thumb?: string // Thumbnail URL for crypto icons
 }
 
 interface AssetStore {
