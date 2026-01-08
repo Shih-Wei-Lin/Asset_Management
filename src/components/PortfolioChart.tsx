@@ -4,7 +4,7 @@ import { useAssetStore } from '../store/assetStore'
 import { getMarketChart } from '../services/coingecko'
 import { getStockChart } from '../services/yahooFinance'
 
-type TimeRange = '1W' | '1M' | '1Y'
+export type TimeRange = '1W' | '1M' | '1Y'
 
 const RANGE_DAYS: Record<TimeRange, number> = {
     '1W': 7,
@@ -17,9 +17,12 @@ interface ChartDataPoint {
     value: number
 }
 
-export const PortfolioChart: React.FC = () => {
+export interface PortfolioChartProps {
+    range: TimeRange
+}
+
+export const PortfolioChart: React.FC<PortfolioChartProps> = ({ range }) => {
     const { assets, preferredCurrency, exchangeRate } = useAssetStore()
-    const [range, setRange] = useState<TimeRange>('1M')
     const [chartData, setChartData] = useState<ChartDataPoint[]>([])
     const [isLoading, setIsLoading] = useState(false)
 
@@ -87,70 +90,50 @@ export const PortfolioChart: React.FC = () => {
     const currencySymbol = preferredCurrency === 'USD' ? '$' : 'NT$'
 
     return (
-        <div className="glass-card p-4 mb-6">
-            {/* Range Tabs */}
-            <div className="flex gap-2 mb-4">
-                {(['1W', '1M', '1Y'] as TimeRange[]).map((r) => (
-                    <button
-                        key={r}
-                        onClick={() => setRange(r)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${range === r
-                            ? 'bg-indigo-500 text-white'
-                            : 'bg-white/5 text-white/50 hover:bg-white/10'
-                            }`}
-                    >
-                        {r}
-                    </button>
-                ))}
-            </div>
-
-            {/* Chart */}
-            <div className="h-48">
-                {isLoading ? (
-                    <div className="h-full flex items-center justify-center text-white/40">Loading...</div>
-                ) : chartData.length === 0 ? (
-                    <div className="h-full flex items-center justify-center text-white/40 text-sm">No data for chart</div>
-                ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={chartData}>
-                            <defs>
-                                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
-                                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <XAxis
-                                dataKey="date"
-                                axisLine={false}
-                                tickLine={false}
-                                tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }}
-                                interval="preserveStartEnd"
-                            />
-                            <YAxis
-                                hide
-                                domain={['dataMin', 'dataMax']}
-                            />
-                            <Tooltip
-                                contentStyle={{
-                                    backgroundColor: 'rgba(30, 30, 46, 0.9)',
-                                    border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: '8px',
-                                    color: '#fff'
-                                }}
-                                formatter={(value: number | undefined) => value !== undefined ? [`${currencySymbol}${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, 'Value'] : ['N/A', 'Value']}
-                            />
-                            <Area
-                                type="monotone"
-                                dataKey="value"
-                                stroke="#8b5cf6"
-                                strokeWidth={2}
-                                fillOpacity={1}
-                                fill="url(#colorValue)"
-                            />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                )}
-            </div>
+        <div className="w-full h-full min-h-[160px]">
+            {isLoading ? (
+                <div className="h-full flex items-center justify-center text-white/20 text-xs">Loading chart...</div>
+            ) : chartData.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-white/20 text-xs">No chart data</div>
+            ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData}>
+                        <defs>
+                            <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#c084fc" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#c084fc" stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+                        <XAxis
+                            dataKey="date"
+                            hide
+                        />
+                        <YAxis
+                            hide
+                            domain={['dataMin', 'dataMax']}
+                        />
+                        <Tooltip
+                            contentStyle={{
+                                backgroundColor: 'rgba(30, 30, 46, 0.9)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '8px',
+                                color: '#fff',
+                                fontSize: '12px'
+                            }}
+                            formatter={(value: number | undefined) => value !== undefined ? [`${currencySymbol}${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, 'Value'] : ['N/A', 'Value']}
+                            labelStyle={{ color: 'rgba(255,255,255,0.5)' }}
+                        />
+                        <Area
+                            type="monotone"
+                            dataKey="value"
+                            stroke="#c084fc"
+                            strokeWidth={2}
+                            fillOpacity={1}
+                            fill="url(#colorValue)"
+                        />
+                    </AreaChart>
+                </ResponsiveContainer>
+            )}
         </div>
     )
 }

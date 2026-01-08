@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Plus, Wallet, TrendingUp, RefreshCw, AlertCircle } from 'lucide-react'
 import { AddAssetForm } from './AddAssetForm'
 import { AssetList } from './AssetList'
-import { PortfolioChart } from './PortfolioChart'
+import { PortfolioChart, type TimeRange } from './PortfolioChart'
 import { AllocationChart } from './AllocationChart'
 import { useAssetStore, selectTotalValue } from '../store/assetStore'
 import { getPrices } from '../services/coingecko'
@@ -25,6 +25,7 @@ export const Dashboard: React.FC = () => {
         setError
     } = useAssetStore()
     const [isRefreshing, setIsRefreshing] = useState(false)
+    const [chartRange, setChartRange] = useState<TimeRange>('1M')
 
     // Use selector for consistent total value calculation
     const displayValue = selectTotalValue({ assets, prices, exchangeRate, preferredCurrency, lastUpdated, error, addAsset: () => { }, removeAsset: () => { }, updateAsset: () => { }, setPrices: () => { }, setExchangeRate: () => { }, setPreferredCurrency: () => { }, setLastUpdated: () => { }, setError: () => { } })
@@ -117,30 +118,57 @@ export const Dashboard: React.FC = () => {
             </div>
 
             {/* Hero Card / Total Balance */}
-            <div className="glass-card p-6 mb-8 relative overflow-hidden group">
-                {/* Background blobs for card */}
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-purple-500/30 rounded-full blur-3xl group-hover:bg-purple-500/40 transition-all duration-700"></div>
-                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/30 rounded-full blur-3xl group-hover:bg-blue-500/40 transition-all duration-700"></div>
+            <div className="glass-card mb-8 relative overflow-hidden group min-h-[220px] flex flex-col justify-between p-0">
 
-                <div className="relative z-10">
-                    <p className="text-indigo-200 text-sm font-medium mb-1">總資產 ({preferredCurrency})</p>
-                    <h1 className="text-4xl font-bold text-white mb-4 tracking-tight">
-                        {preferredCurrency === 'USD' ? '$' : 'NT$'}
-                        {displayValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                    </h1>
+                {/* Chart Background Layer */}
+                <div className="absolute inset-0 z-0 opacity-50 translate-y-8 pointer-events-none sm:pointer-events-auto">
+                    <PortfolioChart range={chartRange} />
+                </div>
 
-                    <div className="flex items-center gap-2 bg-white/5 w-fit px-3 py-1.5 rounded-full border border-white/5">
-                        <TrendingUp size={16} className={isPositive ? 'text-emerald-400' : 'text-red-400'} />
-                        <span className={`text-sm font-semibold ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-                            +{dailyChangePercent}%
-                        </span>
-                        <span className="text-xs text-white/40 ml-1">今日</span>
+                {/* Background blobs for card (moved behind chart slightly or blended) */}
+                <div className="absolute -top-10 -right-10 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl transition-all duration-700 pointer-events-none"></div>
+                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl transition-all duration-700 pointer-events-none"></div>
+
+                {/* Main Content Area */}
+                <div className="relative z-10 p-6 flex flex-col h-full justify-between">
+
+                    {/* Top Row: Label and Time Range */}
+                    <div className="flex justify-between items-start">
+                        <p className="text-indigo-200 text-sm font-medium">總資產 ({preferredCurrency})</p>
+
+                        <div className="flex bg-black/20 rounded-lg p-1 backdrop-blur-md">
+                            {(['1W', '1M', '1Y'] as TimeRange[]).map((r) => (
+                                <button
+                                    key={r}
+                                    onClick={() => setChartRange(r)}
+                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${chartRange === r
+                                        ? 'bg-indigo-500 text-white shadow-sm'
+                                        : 'text-white/40 hover:text-white/80 hover:bg-white/5'
+                                        }`}
+                                >
+                                    {r}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Middle: Amount and Change */}
+                    <div className="mt-2">
+                        <h1 className="text-4xl font-bold text-white mb-2 tracking-tight drop-shadow-sm">
+                            {preferredCurrency === 'USD' ? '$' : 'NT$'}
+                            {displayValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                        </h1>
+
+                        <div className="flex items-center gap-2 bg-white/10 w-fit px-3 py-1.5 rounded-full border border-white/5 backdrop-blur-md">
+                            <TrendingUp size={16} className={isPositive ? 'text-emerald-400' : 'text-red-400'} />
+                            <span className={`text-sm font-semibold ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+                                +{dailyChangePercent}%
+                            </span>
+                            <span className="text-xs text-white/40 ml-1">今日</span>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            {/* Portfolio Chart */}
-            <PortfolioChart />
 
             {/* Allocation Chart */}
             <AllocationChart />
