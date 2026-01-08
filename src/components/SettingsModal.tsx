@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { X, Plus, Trash2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useAssetStore } from '../store/assetStore'
 import { SUPPORTED_EXCHANGES, checkExchangeConnection } from '../services/exchange'
+import { testOKXConnection } from '../services/okxApi'
 
 interface SettingsModalProps {
     onClose: () => void
@@ -14,8 +15,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
     const [selectedExchangeId, setSelectedExchangeId] = useState(SUPPORTED_EXCHANGES[0].id)
     const [apiKey, setApiKey] = useState('')
     const [apiSecret, setApiSecret] = useState('')
+    const [passphrase, setPassphrase] = useState('')
     const [isValidating, setIsValidating] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+    // Check if selected exchange requires passphrase
+    const requiresPassphrase = selectedExchangeId === 'okx'
 
     const handleAddExchange = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -29,8 +34,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
             return
         }
 
-        // Connection Check
-        const isConnected = await checkExchangeConnection(selectedExchangeId, apiKey, apiSecret)
+        if (requiresPassphrase && !passphrase) {
+            setErrorMsg('Passphrase is required for OKX')
+            setIsValidating(false)
+            return
+        }
+
+        let isConnected = false
+
+        // Use appropriate connection check based on exchange
+        if (selectedExchangeId === 'okx') {
+            isConnected = await testOKXConnection({
+                apiKey,
+                secretKey: apiSecret,
+                passphrase
+            })
+        } else {
+            isConnected = await checkExchangeConnection(selectedExchangeId, apiKey, apiSecret)
+        }
 
         if (isConnected) {
             const exchangeInfo = SUPPORTED_EXCHANGES.find(ex => ex.id === selectedExchangeId)
@@ -39,11 +60,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                 exchangeId: selectedExchangeId,
                 name: exchangeInfo?.name || selectedExchangeId,
                 apiKey,
-                apiSecret
+                apiSecret,
+                passphrase: requiresPassphrase ? passphrase : undefined
             })
             // Reset form
             setApiKey('')
             setApiSecret('')
+            setPassphrase('')
         } else {
             setErrorMsg('Connection failed. Please check your keys and try again.')
         }
@@ -104,6 +127,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                     onChange={(e) => setApiSecret(e.target.value)}
                                 />
                             </div>
+
+                            {requiresPassphrase && (
+                                <div>
+                                    <label className="block text-xs text-white/40 mb-1">Passphrase</label>
+                                    <input
+                                        type="password"
+                                        className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                                        placeholder="Enter your Passphrase"
+                                        value={passphrase}
+                                        onChange={(e) => setPassphrase(e.target.value)}
+                                    />
+                                    <p className="text-[10px] text-white/30 mt-1">The passphrase you set when creating the API key</p>
+                                </div>
+                            )}
                         </div>
 
                         {errorMsg && (
