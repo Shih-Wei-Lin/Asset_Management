@@ -19,9 +19,10 @@ interface ChartDataPoint {
 
 export interface PortfolioChartProps {
     range: TimeRange
+    onDataChange?: (startPrice: number, endPrice: number) => void
 }
 
-export const PortfolioChart: React.FC<PortfolioChartProps> = ({ range }) => {
+export const PortfolioChart: React.FC<PortfolioChartProps> = ({ range, onDataChange }) => {
     const { assets, preferredCurrency, exchangeRate } = useAssetStore()
     const [chartData, setChartData] = useState<ChartDataPoint[]>([])
     const [isLoading, setIsLoading] = useState(false)
@@ -77,6 +78,14 @@ export const PortfolioChart: React.FC<PortfolioChartProps> = ({ range }) => {
                 })
 
                 setChartData(processed)
+
+                // Notify parent of data change for percentage calculation
+                if (processed.length > 0 && onDataChange) {
+                    const start = processed[0].value
+                    const end = processed[processed.length - 1].value
+                    onDataChange(start, end)
+                }
+
             } catch (error) {
                 console.error('Chart fetch error:', error)
                 setChartData([])
@@ -85,7 +94,7 @@ export const PortfolioChart: React.FC<PortfolioChartProps> = ({ range }) => {
         }
 
         fetchChartData()
-    }, [assets, range, preferredCurrency, exchangeRate])
+    }, [assets, range, preferredCurrency, exchangeRate, onDataChange])
 
     const currencySymbol = preferredCurrency === 'USD' ? '$' : 'NT$'
 
@@ -100,8 +109,8 @@ export const PortfolioChart: React.FC<PortfolioChartProps> = ({ range }) => {
                     <AreaChart data={chartData}>
                         <defs>
                             <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#c084fc" stopOpacity={0.3} />
-                                <stop offset="95%" stopColor="#c084fc" stopOpacity={0} />
+                                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                             </linearGradient>
                         </defs>
                         <XAxis
@@ -114,19 +123,22 @@ export const PortfolioChart: React.FC<PortfolioChartProps> = ({ range }) => {
                         />
                         <Tooltip
                             contentStyle={{
-                                backgroundColor: 'rgba(30, 30, 46, 0.9)',
+                                backgroundColor: 'rgba(20, 20, 20, 0.9)',
                                 border: '1px solid rgba(255,255,255,0.1)',
                                 borderRadius: '8px',
                                 color: '#fff',
                                 fontSize: '12px'
                             }}
-                            formatter={(value: number | undefined) => value !== undefined ? [`${currencySymbol}${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, 'Value'] : ['N/A', 'Value']}
+                            formatter={(value: number | undefined) => [
+                                value !== undefined ? `${currencySymbol}${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : 'N/A',
+                                'Value'
+                            ]}
                             labelStyle={{ color: 'rgba(255,255,255,0.5)' }}
                         />
                         <Area
                             type="monotone"
                             dataKey="value"
-                            stroke="#c084fc"
+                            stroke="#22c55e"
                             strokeWidth={2}
                             fillOpacity={1}
                             fill="url(#colorValue)"

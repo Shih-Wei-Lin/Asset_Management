@@ -1,6 +1,6 @@
 import React from 'react'
 import { useAssetStore } from '../store/assetStore'
-import { Trash2, TrendingUp, TrendingDown, Bitcoin, Activity } from 'lucide-react'
+import { Trash2, TrendingUp, TrendingDown, Bitcoin, Activity, Link2 } from 'lucide-react'
 import { formatCurrency } from '../utils/format'
 
 export const AssetList: React.FC = () => {
@@ -63,10 +63,17 @@ export const AssetList: React.FC = () => {
                 return (
                     <div
                         key={asset.id}
-                        className="glass-card p-4 hover:bg-white/15 transition-colors duration-200 flex justify-between items-center group"
+                        className="glass-card p-4 hover:bg-white/15 transition-colors duration-200 flex justify-between items-center group relative overflow-hidden"
                     >
+                        {/* Synced Indicator Background Hint */}
+                        {asset.exchangeId && (
+                            <div className="absolute top-0 right-0 p-1 opacity-10">
+                                <Link2 size={64} />
+                            </div>
+                        )}
+
                         {/* ... (Icon & Name section same) */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 z-10">
                             {/* Asset Icon - Use thumb for crypto, flag for stock */}
                             {asset.thumb ? (
                                 <img
@@ -93,12 +100,18 @@ export const AssetList: React.FC = () => {
                                     <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-white/10 text-white/50 uppercase tracking-wider">
                                         {asset.type}
                                     </span>
+                                    {asset.exchangeId && (
+                                        <div className="flex items-center gap-1 text-[10px] text-indigo-300 px-1.5 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-500/30">
+                                            <Link2 size={10} />
+                                            <span>SYNCED</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <p className="text-xs text-white/40 font-medium">{asset.amount.toLocaleString()} 單位</p>
                             </div>
                         </div>
 
-                        <div className="text-right">
+                        <div className="text-right z-10">
                             <p className="font-bold text-base text-white tracking-wide">
                                 {formatCurrency(displayValue, preferredCurrency)}
                             </p>
@@ -109,16 +122,18 @@ export const AssetList: React.FC = () => {
                         </div>
 
 
-                        {/* Delete Action (Hidden by default, visible on hover/focus) */}
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                if (confirm('Delete this asset?')) removeAsset(asset.id)
-                            }}
-                            className="absolute right-4 opacity-0 group-hover:opacity-100 p-2 bg-red-500/80 text-white rounded-lg transition-all translate-x-4 group-hover:translate-x-0 ml-4 shadow-lg"
-                        >
-                            <Trash2 size={16} />
-                        </button>
+                        {/* Delete Action (Only for manual assets) */}
+                        {!asset.exchangeId && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (confirm('Delete this asset?')) removeAsset(asset.id)
+                                }}
+                                className="absolute right-4 opacity-0 group-hover:opacity-100 p-2 bg-red-500/80 text-white rounded-lg transition-all translate-x-4 group-hover:translate-x-0 ml-4 shadow-lg z-20"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        )}
                     </div>
                 )
             })}

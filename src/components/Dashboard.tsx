@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react'
-import { Plus, Wallet, TrendingUp, RefreshCw, AlertCircle } from 'lucide-react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { Plus, Wallet, TrendingUp, RefreshCw, AlertCircle, Settings } from 'lucide-react'
 import { AddAssetForm } from './AddAssetForm'
+import { SettingsModal } from './SettingsModal'
 import { AssetList } from './AssetList'
 import { PortfolioChart, type TimeRange } from './PortfolioChart'
 import { AllocationChart } from './AllocationChart'
@@ -11,6 +12,7 @@ import { getStockPrices, getExchangeRate } from '../services/yahooFinance'
 
 export const Dashboard: React.FC = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false)
     const {
         assets,
         prices,
@@ -22,13 +24,14 @@ export const Dashboard: React.FC = () => {
         lastUpdated,
         error,
         setLastUpdated,
-        setError
+        setError,
+        syncExchanges
     } = useAssetStore()
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [chartRange, setChartRange] = useState<TimeRange>('1M')
 
     // Use selector for consistent total value calculation
-    const displayValue = selectTotalValue({ assets, prices, exchangeRate, preferredCurrency, lastUpdated, error, addAsset: () => { }, removeAsset: () => { }, updateAsset: () => { }, setPrices: () => { }, setExchangeRate: () => { }, setPreferredCurrency: () => { }, setLastUpdated: () => { }, setError: () => { } })
+    const displayValue = selectTotalValue({ assets, prices, exchangeRate, preferredCurrency, lastUpdated, error, addAsset: () => { }, removeAsset: () => { }, updateAsset: () => { }, setPrices: () => { }, setExchangeRate: () => { }, setPreferredCurrency: () => { }, setLastUpdated: () => { }, setError: () => { }, addExchange: () => { }, removeExchange: () => { }, syncExchanges: async () => { }, exchanges: [] })
 
     const fetchPrices = async () => {
         setIsRefreshing(true)
@@ -39,21 +42,24 @@ export const Dashboard: React.FC = () => {
             const rate = await getExchangeRate()
             setExchangeRate(rate)
 
-            // 1. Fetch Crypto Prices
+            // 1. Sync Exchanges (New!)
+            await syncExchanges()
+
+            // 2. Fetch Crypto Prices
             const cryptoIds = assets
                 .filter(a => a.type === 'crypto' && a.apiId)
                 .map(a => a.apiId as string)
 
             const cryptoPrices = cryptoIds.length > 0 ? await getPrices(cryptoIds) : {}
 
-            // 2. Fetch Stock Prices
+            // 3. Fetch Stock Prices
             const stockSymbols = assets
                 .filter(a => a.type === 'stock')
                 .map(a => a.symbol)
 
             const stockPrices = stockSymbols.length > 0 ? await getStockPrices(stockSymbols) : {}
 
-            // 3. Merge and Update Store
+            // 4. Merge and Update Store
             setPrices({ ...cryptoPrices, ...stockPrices })
             setLastUpdated(Date.now())
         } catch (err) {
@@ -69,20 +75,41 @@ export const Dashboard: React.FC = () => {
         fetchPrices()
         const interval = setInterval(fetchPrices, 60000)
         return () => clearInterval(interval)
-    }, [assets.length])
+    }, []) // Removed assets.length dependency to prevent loops
 
-    // Calculate mock daily change (purely aesthetic for now)
-    const isPositive = true
-    const dailyChangePercent = 2.54
+    const [chartDataSummary, setChartDataSummary] = useState<{ start: number, end: number } | null>(null)
+
+    // Calculate dynamic change based on chart data
+    const absoluteChange = chartDataSummary ? chartDataSummary.end - chartDataSummary.start : 0
+    const percentageChange = chartDataSummary && chartDataSummary.start !== 0
+        ? (absoluteChange / chartDataSummary.start) * 100
+        : 0
+    const isPositiveChange = absoluteChange >= 0
+
+    // Map time range to display label
+    const rangeLabelMap: Record<TimeRange, string> = {
+        '1W': '1周收益',
+        '1M': '1月收益',
+        '1Y': '1年收益'
+    }
+
+    // Memoize callback to prevent infinite loops in PortfolioChart
+    const handleChartDataChange = useCallback((start: number, end: number) => {
+        setChartDataSummary(prev => {
+            // Only update if values actually changed to further reduce re-renders
+            if (prev?.start === start && prev?.end === end) return prev
+            return { start, end }
+        })
+    }, [])
 
     return (
-        <div className="min-h-screen pb-24 px-4 sm:px-6 lg:px-8 max-w-lg mx-auto">
+        <div className="min-h-screen pb-24 px-4 sm:px-6 lg:px-8 max-w-lg mx-auto bg-black text-white">
             {/* Header / Top Bar */}
             <div className="flex flex-col gap-4 py-6">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                        <div className="bg-indigo-500/20 p-2 rounded-lg backdrop-blur-sm">
-                            <Wallet className="text-indigo-400" size={24} />
+                        <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+                            <Wallet className="text-white" size={24} />
                         </div>
                         <div>
                             <span className="font-bold text-lg tracking-wide text-white/90">我的資產</span>
@@ -96,53 +123,69 @@ export const Dashboard: React.FC = () => {
                             <RefreshCw size={14} className="text-white/40 animate-spin ml-1" />
                         )}
                     </div>
-                    {/* Currency Toggle */}
-                    <button
-                        onClick={() => setPreferredCurrency(preferredCurrency === 'USD' ? 'TWD' : 'USD')}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-                    >
-                        <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white">
-                            {preferredCurrency === 'USD' ? '$' : 'NT'}
-                        </div>
-                        <span className="text-xs font-semibold text-white/80">{preferredCurrency}</span>
-                    </button>
+
+                    {/* Right Side Actions */}
+                    <div className="flex items-center gap-2">
+                        {/* Settings Button */}
+                        <button
+                            onClick={() => setIsSettingsOpen(true)}
+                            className="p-2 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-white/60"
+                        >
+                            <Settings size={18} />
+                        </button>
+
+                        {/* Currency Toggle */}
+                        <button
+                            onClick={() => setPreferredCurrency(preferredCurrency === 'USD' ? 'TWD' : 'USD')}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+                        >
+                            <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold text-white">
+                                {preferredCurrency === 'USD' ? '$' : 'NT'}
+                            </div>
+                            <span className="text-xs font-semibold text-white/80">{preferredCurrency}</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Error Banner */}
                 {error && (
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-center gap-2 text-red-200 text-xs animate-fade-in">
-                        <AlertCircle size={14} className="shrink-0" />
-                        <span>{error}</span>
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 flex items-start gap-3">
+                        <AlertCircle className="text-red-400 shrink-0 mt-0.5" size={16} />
+                        <p className="text-xs text-red-200">{error}</p>
                     </div>
                 )}
             </div>
 
-            {/* Hero Card / Total Balance */}
-            <div className="glass-card mb-8 relative overflow-hidden group min-h-[220px] flex flex-col justify-between p-0">
+            {/* Hero Card with Integrated Chart / Total Asset */}
+            <div className="relative w-full aspect-[16/10] bg-[#1a1b26] rounded-3xl overflow-hidden shadow-2xl border border-white/5">
 
-                {/* Chart Background Layer */}
-                <div className="absolute inset-0 z-0 opacity-50 translate-y-8 pointer-events-none sm:pointer-events-auto">
-                    <PortfolioChart range={chartRange} />
+                {/* Background Chart Layer */}
+                <div className="absolute inset-0 z-0 opacity-50">
+                    <PortfolioChart
+                        range={chartRange}
+                        onDataChange={handleChartDataChange}
+                    />
                 </div>
-
-                {/* Background blobs for card (moved behind chart slightly or blended) */}
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl transition-all duration-700 pointer-events-none"></div>
-                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl transition-all duration-700 pointer-events-none"></div>
 
                 {/* Main Content Area */}
                 <div className="relative z-10 p-6 flex flex-col h-full justify-between">
 
-                    {/* Top Row: Label and Time Range */}
+                    {/* Top Row: Label and Eye Icon (Visual) */}
                     <div className="flex justify-between items-start">
-                        <p className="text-indigo-200 text-sm font-medium">總資產 ({preferredCurrency})</p>
+                        <div className="flex items-center gap-2 text-white/60">
+                            <p className="text-sm font-medium">總資產估值</p>
+                            {/* Eye icon/toggle placeholder */}
+                            <div className="w-4 h-4 rounded-full border-2 border-white/20"></div>
+                        </div>
 
-                        <div className="flex bg-black/20 rounded-lg p-1 backdrop-blur-md">
+                        {/* Time Range Selectors */}
+                        <div className="flex bg-white/5 rounded-lg p-1 backdrop-blur-md border border-white/5">
                             {(['1W', '1M', '1Y'] as TimeRange[]).map((r) => (
                                 <button
                                     key={r}
                                     onClick={() => setChartRange(r)}
-                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all ${chartRange === r
-                                        ? 'bg-indigo-500 text-white shadow-sm'
+                                    className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${chartRange === r
+                                        ? 'bg-white/20 text-white shadow-sm'
                                         : 'text-white/40 hover:text-white/80 hover:bg-white/5'
                                         }`}
                                 >
@@ -153,18 +196,29 @@ export const Dashboard: React.FC = () => {
                     </div>
 
                     {/* Middle: Amount and Change */}
-                    <div className="mt-2">
-                        <h1 className="text-4xl font-bold text-white mb-2 tracking-tight drop-shadow-sm">
-                            {preferredCurrency === 'USD' ? '$' : 'NT$'}
-                            {displayValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                        </h1>
+                    <div className="mt-4">
+                        <div className="flex items-baseline gap-2">
+                            <h1 className="text-5xl font-bold text-white mb-2 tracking-tight drop-shadow-sm font-mono">
+                                {displayValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </h1>
+                            <span className="text-lg text-white/40 font-medium">{preferredCurrency}</span>
+                        </div>
 
-                        <div className="flex items-center gap-2 bg-white/10 w-fit px-3 py-1.5 rounded-full border border-white/5 backdrop-blur-md">
-                            <TrendingUp size={16} className={isPositive ? 'text-emerald-400' : 'text-red-400'} />
-                            <span className={`text-sm font-semibold ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-                                +{dailyChangePercent}%
+                        {/* Dynamic Change Display - Matching Screenshot Style */}
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className="text-white/60 text-sm border-b border-dashed border-white/20 pb-0.5">
+                                {rangeLabelMap[chartRange]}
                             </span>
-                            <span className="text-xs text-white/40 ml-1">今日</span>
+
+                            <div className={`flex items-center gap-1.5 text-sm font-bold ${isPositiveChange ? 'text-[#22c55e]' : 'text-red-400'}`}>
+                                <span>
+                                    {isPositiveChange ? '+' : ''}{preferredCurrency === 'USD' ? '$' : 'NT$'}{Math.abs(absoluteChange).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                                <span>
+                                    ({isPositiveChange ? '+' : ''}{percentageChange.toFixed(2)}%)
+                                </span>
+                                <TrendingUp size={14} className={isPositiveChange ? 'rotate-0' : 'rotate-180'} />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -195,6 +249,11 @@ export const Dashboard: React.FC = () => {
             {/* Modal */}
             {isAddModalOpen && (
                 <AddAssetForm onClose={() => setIsAddModalOpen(false)} />
+            )}
+
+            {/* Settings Modal */}
+            {isSettingsOpen && (
+                <SettingsModal onClose={() => setIsSettingsOpen(false)} />
             )}
         </div>
     )
