@@ -32,7 +32,8 @@ export const AllocationChart: React.FC = () => {
             value: displayValue,
             color: COLORS[index % COLORS.length]
         }
-    }).filter(d => d.value > 0) // Filter out zero-value items
+    }).filter(d => d.value > 0)
+        .sort((a, b) => b.value - a.value)
 
     const total = data.reduce((sum, d) => sum + d.value, 0)
 
