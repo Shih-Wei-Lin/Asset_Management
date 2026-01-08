@@ -109,6 +109,50 @@ async function okxRequest<T>(
 }
 
 /**
+ * Make authenticated request to OKX API (Expect List Return)
+ */
+async function okxRequestList<T>(
+    credentials: OKXCredentials,
+    method: 'GET' | 'POST',
+    path: string,
+    body: string = ''
+): Promise<T[]> {
+    const timestamp = new Date().toISOString()
+    const signature = await signRequest(timestamp, method, path, body, credentials.secretKey)
+
+    const headers: HeadersInit = {
+        'OK-ACCESS-KEY': credentials.apiKey,
+        'OK-ACCESS-SIGN': signature,
+        'OK-ACCESS-TIMESTAMP': timestamp,
+        'OK-ACCESS-PASSPHRASE': credentials.passphrase,
+        'Content-Type': 'application/json',
+    }
+
+    // Use corsproxy.io - it should forward headers correctly
+    const url = PROXY_URL + encodeURIComponent(OKX_BASE_URL + path)
+
+    const response = await fetch(url, {
+        method,
+        headers,
+        body: method === 'POST' && body ? body : undefined,
+    })
+
+    if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[OKX API] Error response:', errorText)
+        throw new Error(`OKX API error: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    if (data.code !== '0') {
+        throw new Error(`OKX API error: ${data.msg || data.code}`)
+    }
+
+    return data.data as T[]
+}
+
+/**
  * Get total account asset valuation from OKX
  * Returns total balance in USD across all account types
  */
@@ -182,27 +226,12 @@ export async function getOKXAccountBalance(credentials: OKXCredentials): Promise
  * Get Funding Account Balances
  */
 export async function getOKXFundingBalance(credentials: OKXCredentials): Promise<OKXBalanceDetail[]> {
-    // See implementation note in previous version about data[0] vs full list
-    // Re-implementing simplified manual fetch to ensure list support
-    const timestamp = new Date().toISOString()
-    const path = '/api/v5/asset/balances'
-    const signature = await signRequest(timestamp, 'GET', path, '', credentials.secretKey)
-
-    const headers: HeadersInit = {
-        'OK-ACCESS-KEY': credentials.apiKey,
-        'OK-ACCESS-SIGN': signature,
-        'OK-ACCESS-TIMESTAMP': timestamp,
-        'OK-ACCESS-PASSPHRASE': credentials.passphrase,
-        'Content-Type': 'application/json',
-    }
-
-    const url = PROXY_URL + encodeURIComponent(OKX_BASE_URL + path)
-
     try {
-        const response = await fetch(url, { method: 'GET', headers })
-        const data = await response.json()
-        if (data.code !== '0') throw new Error(data.msg)
-        return data.data as OKXBalanceDetail[]
+        return await okxRequestList<OKXBalanceDetail>(
+            credentials,
+            'GET',
+            '/api/v5/asset/balances'
+        )
     } catch (e) {
         console.error('Failed to fetch funding balance', e)
         return []
@@ -213,25 +242,12 @@ export async function getOKXFundingBalance(credentials: OKXCredentials): Promise
  * Get Earn (Savings) Balance
  */
 export async function getOKXSavingsBalance(credentials: OKXCredentials): Promise<OKXBalanceDetail[]> {
-    const timestamp = new Date().toISOString()
-    const path = '/api/v5/finance/savings/balance'
-    const signature = await signRequest(timestamp, 'GET', path, '', credentials.secretKey)
-
-    const headers: HeadersInit = {
-        'OK-ACCESS-KEY': credentials.apiKey,
-        'OK-ACCESS-SIGN': signature,
-        'OK-ACCESS-TIMESTAMP': timestamp,
-        'OK-ACCESS-PASSPHRASE': credentials.passphrase,
-        'Content-Type': 'application/json',
-    }
-
-    const url = PROXY_URL + encodeURIComponent(OKX_BASE_URL + path)
-
     try {
-        const response = await fetch(url, { method: 'GET', headers })
-        const data = await response.json()
-        if (data.code !== '0') throw new Error(data.msg)
-        return data.data as OKXBalanceDetail[]
+        return await okxRequestList<OKXBalanceDetail>(
+            credentials,
+            'GET',
+            '/api/v5/finance/savings/balance'
+        )
     } catch (e) {
         console.error('Failed to fetch savings balance', e)
         return []
@@ -259,6 +275,7 @@ export async function getOKXTickers(credentials: OKXCredentials): Promise<OKXTic
         'Content-Type': 'application/json',
     }
 
+    // Use corsproxy.io - it should forward headers correctly
     const url = PROXY_URL + encodeURIComponent(OKX_BASE_URL + path)
 
     try {

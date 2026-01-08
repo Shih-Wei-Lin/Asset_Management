@@ -9,7 +9,6 @@ interface AddAssetFormProps {
 
 export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
     const addAsset = useAssetStore((state) => state.addAsset)
-    const [name, setName] = useState('')
     const [symbol, setSymbol] = useState('')
     const [type, setType] = useState<AssetType>('crypto')
     const [amount, setAmount] = useState('')
@@ -43,7 +42,6 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
     }, [searchQuery, type])
 
     const selectCoin = (coin: CoinSearchResult) => {
-        setName(coin.name)
         setSymbol(coin.symbol.toUpperCase())
         setApiId(coin.id)
         setThumb(coin.thumb)
@@ -77,10 +75,8 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
             finalSymbol = `${finalSymbol}.TW`
         }
 
-        const finalName = name || finalSymbol
 
         addAsset({
-            name: finalName,
             symbol: finalSymbol,
             type,
             amount: parseFloat(amount),
