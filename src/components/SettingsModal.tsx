@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { X, Plus, Trash2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { X, Plus, Trash2, CheckCircle2, AlertCircle, Download, Upload } from 'lucide-react'
 import { useAssetStore } from '../store/assetStore'
 import { SUPPORTED_EXCHANGES, checkExchangeConnection } from '../services/exchange'
 import { testOKXConnection } from '../services/okxApi'
@@ -72,6 +72,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         }
 
         setIsValidating(false)
+    }
+
+    // Export Data (Backup)
+    const handleExport = () => {
+        const data = localStorage.getItem('asset-storage')
+        if (!data) return
+
+        const blob = new Blob([data], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `asset-backup-${new Date().toISOString().slice(0, 10)}.json`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+    }
+
+    // Import Data (Restore)
+    const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        const reader = new FileReader()
+        reader.onload = (event) => {
+            try {
+                const json = event.target?.result as string
+                // Basic validation: check if it looks like our store
+                if (!json.includes('"state"') || !json.includes('"version"')) {
+                    throw new Error('Invalid backup file')
+                }
+
+                localStorage.setItem('asset-storage', json)
+                alert('Backup restored successfully! The page will refresh.')
+                window.location.reload()
+            } catch (err) {
+                console.error(err)
+                setErrorMsg('Failed to restore backup. Invalid file.')
+            }
+        }
+        reader.readAsText(file)
     }
 
     return (
@@ -205,6 +246,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                                 ))}
                             </div>
                         )}
+                    </div>
+
+                    {/* Data Management Section */}
+                    <div className="space-y-3 pt-4 border-t border-white/10">
+                        <h3 className="text-sm font-semibold text-white/60">Data Management</h3>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={handleExport}
+                                className="flex items-center justify-center gap-2 py-2 px-4 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors border border-white/10"
+                            >
+                                <Download size={16} className="text-indigo-400" />
+                                Export Backup
+                            </button>
+
+                            <label className="flex items-center justify-center gap-2 py-2 px-4 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors border border-white/10 cursor-pointer">
+                                <Upload size={16} className="text-emerald-400" />
+                                Restore Backup
+                                <input
+                                    type="file"
+                                    accept=".json"
+                                    className="hidden"
+                                    onChange={handleImport}
+                                />
+                            </label>
+                        </div>
+                        <p className="text-[10px] text-white/30 text-center">
+                            Save your keys and assets to a file to transfer between devices.
+                        </p>
                     </div>
 
                 </div>
