@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAssetStore, type Asset } from '../store/assetStore'
 import { AssetDetailModal } from './AssetDetailModal'
 import { Trash2, TrendingUp, TrendingDown, Bitcoin, Activity, Link2 } from 'lucide-react'
@@ -8,6 +8,18 @@ export const AssetList: React.FC = () => {
     const { assets, removeAsset, prices, preferredCurrency, exchangeRate, exchanges } = useAssetStore()
     const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
     const [hideSmallBalances, setHideSmallBalances] = useState(false)
+
+    useEffect(() => {
+        if (!selectedAsset) return
+        const updatedAsset = assets.find((asset) => asset.id === selectedAsset.id)
+        if (!updatedAsset) {
+            setSelectedAsset(null)
+            return
+        }
+        if (updatedAsset !== selectedAsset) {
+            setSelectedAsset(updatedAsset)
+        }
+    }, [assets, selectedAsset])
 
     if (assets.length === 0) {
         // ... (empty state same)

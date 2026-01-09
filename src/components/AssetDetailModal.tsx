@@ -20,10 +20,13 @@ interface AssetDetailModalProps {
 }
 
 export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, onClose }) => {
-    const { prices, preferredCurrency, exchangeRate, removeAsset } = useAssetStore()
+    const { prices, preferredCurrency, exchangeRate, removeAsset, updateAsset } = useAssetStore()
     const [chartRange, setChartRange] = useState<TimeRange>('1M')
     const [chartData, setChartData] = useState<{ date: string, value: number }[]>([])
     const [isLoading, setIsLoading] = useState(false)
+    const [isEditing, setIsEditing] = useState(false)
+    const [amountInput, setAmountInput] = useState(asset.amount.toString())
+    const [buyPriceInput, setBuyPriceInput] = useState(asset.buyPrice !== undefined ? asset.buyPrice.toString() : '')
 
     // Calculate current values
     const priceKey = asset.type === 'crypto' ? asset.apiId : asset.symbol
@@ -83,11 +86,49 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, onClo
         }
     }, [asset, chartRange, preferredCurrency, exchangeRate])
 
+    useEffect(() => {
+        setAmountInput(asset.amount.toString())
+        setBuyPriceInput(asset.buyPrice !== undefined ? asset.buyPrice.toString() : '')
+        setIsEditing(false)
+    }, [asset])
+
     const handleDelete = () => {
         if (confirm('Are you sure you want to delete this asset?')) {
             removeAsset(asset.id)
             onClose()
         }
+    }
+
+    const handleSave = () => {
+        const parsedAmount = Number.parseFloat(amountInput)
+        if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+            alert('Please enter a valid quantity.')
+            return
+        }
+
+        let parsedBuyPrice: number | undefined
+        if (buyPriceInput.trim() !== '') {
+            const parsed = Number.parseFloat(buyPriceInput)
+            if (!Number.isFinite(parsed) || parsed < 0) {
+                alert('Please enter a valid buy price.')
+                return
+            }
+            parsedBuyPrice = parsed
+        }
+
+        updateAsset(asset.id, {
+            amount: parsedAmount,
+            buyPrice: parsedBuyPrice
+        })
+        setAmountInput(parsedAmount.toString())
+        setBuyPriceInput(parsedBuyPrice !== undefined ? parsedBuyPrice.toString() : '')
+        setIsEditing(false)
+    }
+
+    const handleCancelEdit = () => {
+        setAmountInput(asset.amount.toString())
+        setBuyPriceInput(asset.buyPrice !== undefined ? asset.buyPrice.toString() : '')
+        setIsEditing(false)
     }
 
     const currencySymbol = preferredCurrency === 'USD' ? '$' : 'NT$'
@@ -140,6 +181,32 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, onClo
                             </p>
                         </div>
                     </div>
+
+                    {!asset.exchangeId && isEditing && (
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                                <label className="block text-xs text-white/40 mb-2">Quantity</label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    value={amountInput}
+                                    onChange={(e) => setAmountInput(e.target.value)}
+                                    className="glass-input"
+                                />
+                            </div>
+                            <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                                <label className="block text-xs text-white/40 mb-2">Buy Price</label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    value={buyPriceInput}
+                                    onChange={(e) => setBuyPriceInput(e.target.value)}
+                                    placeholder="0.00"
+                                    className="glass-input"
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Chart Section */}
@@ -202,13 +269,36 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, onClo
 
                 {/* Footer Actions */}
                 {!asset.exchangeId && (
-                    <div className="p-6 border-t border-white/5 flex justify-end">
+                    <div className="p-6 border-t border-white/5 flex items-center justify-between gap-3">
                         <button
                             onClick={handleDelete}
                             className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-colors text-sm font-medium"
                         >
                             <Trash2 size={16} /> Delete Asset
                         </button>
+                        {isEditing ? (
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleCancelEdit}
+                                    className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 transition-colors text-sm font-medium"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    className="px-4 py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 transition-colors text-sm font-medium"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => setIsEditing(true)}
+                                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 transition-colors text-sm font-medium"
+                            >
+                                Edit
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

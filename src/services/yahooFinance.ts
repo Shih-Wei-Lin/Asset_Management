@@ -1,6 +1,6 @@
 // Yahoo Finance API via CORS Proxy
 // Note: This is a free endpoint and might be rate-limited.
-// Using https://corsproxy.io/ to bypass CORS restrictions on client-side.
+// Using multiple CORS proxies as fallback options.
 
 // Cache configuration
 const CACHE_TTL = 60 * 1000 // 60 seconds
@@ -9,29 +9,47 @@ const chartCache: Record<string, { data: [number, number][], timestamp: number }
 
 const YAHOO_BASE_URL = 'https://query1.finance.yahoo.com/v8/finance/chart'
 
-// Helper to fetch with fallback
+// List of proxy options (ordered by preference)
+const PROXY_OPTIONS = [
+    // 1. Private Cloudflare Worker (Primary)
+    (url: string) => `https://frosty-block-56bd.sean7115.workers.dev/?${encodeURIComponent(url)}`,
+    // 2. AllOrigins (Backup 1)
+    (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    // 3. CORS Anywhere alternative
+    (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+]
+
+// Helper to fetch with fallback through multiple proxies
 const fetchWithFallback = async (targetUrl: string): Promise<any> => {
-    // 1. Try Primary Proxy (Private Cloudflare Worker)
-    try {
-        const response = await fetch(`https://frosty-block-56bd.sean7115.workers.dev/?${encodeURIComponent(targetUrl)}`)
-        if (response.ok) return await response.json()
-    } catch (e) {
-        console.warn('Primary proxy failed, trying backup...', e)
-    }
+    let lastError: Error | null = null
 
-    // 2. Try Backup Proxy (allorigins.win)
-    try {
-        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`)
-        if (response.ok) {
-            const data = await response.json()
-            // allorigins returns the actual content in a 'contents' string field
-            return JSON.parse(data.contents)
+    for (let i = 0; i < PROXY_OPTIONS.length; i++) {
+        try {
+            const proxyUrl = PROXY_OPTIONS[i](targetUrl)
+            const response = await fetch(proxyUrl)
+
+            if (response.ok) {
+                const text = await response.text()
+                // Handle allorigins.win which might return wrapped content
+                try {
+                    const data = JSON.parse(text)
+                    // Check if it's wrapped by allorigins (has 'contents' field)
+                    if (data.contents && typeof data.contents === 'string') {
+                        return JSON.parse(data.contents)
+                    }
+                    return data
+                } catch {
+                    // If parsing fails, try as plain JSON
+                    return JSON.parse(text)
+                }
+            }
+        } catch (e) {
+            console.warn(`Proxy ${i + 1} failed:`, e)
+            lastError = e as Error
         }
-    } catch (e) {
-        console.warn('Backup proxy failed', e)
     }
 
-    throw new Error('All proxies failed')
+    throw lastError || new Error('All proxies failed')
 }
 
 export const getStockPrice = async (symbol: string): Promise<number | null> => {
