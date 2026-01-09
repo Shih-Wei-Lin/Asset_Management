@@ -11,9 +11,9 @@ const YAHOO_BASE_URL = 'https://query1.finance.yahoo.com/v8/finance/chart'
 
 // Helper to fetch with fallback
 const fetchWithFallback = async (targetUrl: string): Promise<any> => {
-    // 1. Try Primary Proxy (corsproxy.io)
+    // 1. Try Primary Proxy (Private Cloudflare Worker)
     try {
-        const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`)
+        const response = await fetch(`https://frosty-block-56bd.sean7115.workers.dev/?${encodeURIComponent(targetUrl)}`)
         if (response.ok) return await response.json()
     } catch (e) {
         console.warn('Primary proxy failed, trying backup...', e)

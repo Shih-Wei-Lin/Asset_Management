@@ -3,7 +3,7 @@
  * Uses HMAC-SHA256 signing via Web Crypto API
  */
 
-const PROXY_URL = 'https://corsproxy.io/?'
+const PROXY_URL = 'https://frosty-block-56bd.sean7115.workers.dev/?'
 const OKX_BASE_URL = 'https://www.okx.com'
 
 export interface OKXCredentials {
