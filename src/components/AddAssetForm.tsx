@@ -55,8 +55,8 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
         setSymbol(value)
 
         if (type === 'stock') {
-            // 4-6 digits = Taiwan Stock (includes ETFs like 00878)
-            if (/^\d{4,6}$/.test(value)) {
+            // 4-6 digits or alphanumeric (e.g. 00875B) = Taiwan Stock
+            if (/^[0-9A-Za-z]{4,6}$/.test(value)) {
                 // You could add a visual indicator here if you had a state for it
                 // For now, we'll just handle the logic at submit or maybe render a badge?
             }
@@ -70,8 +70,9 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
 
         let finalSymbol = symbol.toUpperCase()
 
-        // Auto-append .TW for Taiwan stocks (4-6 digits, e.g. 2330, 00878)
-        if (type === 'stock' && /^\d{4,6}$/.test(finalSymbol)) {
+        // Auto-append .TW for Taiwan stocks (4-6 chars, e.g. 2330, 00878, 00875B)
+        // Check if it's alphanumeric and looks like a TW stock code
+        if (type === 'stock' && /^[0-9A-Z]{4,6}$/.test(finalSymbol)) {
             finalSymbol = `${finalSymbol}.TW`
         }
 
@@ -191,7 +192,7 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
                                 {/* Market Indicator */}
                                 {type === 'stock' && symbol && (
                                     <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold px-2 py-1 rounded bg-white/10 text-white/60">
-                                        {/^\d{4,6}$/.test(symbol) ? '🇹🇼 台股' : /^[a-zA-Z]+$/.test(symbol) ? '🇺🇸 美股' : 'Unknown'}
+                                        {/^[0-9A-Z]{4,6}$/.test(symbol.toUpperCase()) ? '🇹🇼 台股' : /^[a-zA-Z]+$/.test(symbol) ? '🇺🇸 美股' : 'Unknown'}
                                     </div>
                                 )}
                             </div>
