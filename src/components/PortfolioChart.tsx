@@ -59,7 +59,7 @@ export const PortfolioChart: React.FC<PortfolioChartProps> = ({ range, onDataCha
                 }
 
                 // Process data
-                const isTWDAsset = primaryAsset.type === 'stock' && primaryAsset.symbol.endsWith('.TW')
+                const isTWDAsset = primaryAsset.type === 'stock' && (primaryAsset.symbol.endsWith('.TW') || primaryAsset.symbol.endsWith('.TWO'))
 
                 const processed: ChartDataPoint[] = rawData.map(([timestamp, price]) => {
                     let value = price * primaryAsset.amount

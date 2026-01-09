@@ -29,8 +29,8 @@ export const AssetDetailModal: React.FC<AssetDetailModalProps> = ({ asset, onClo
     const priceKey = asset.type === 'crypto' ? asset.apiId : asset.symbol
     const currentPriceRaw = (priceKey && prices[priceKey]) ? prices[priceKey] : (asset.buyPrice || 0)
 
-    // Adjust for Currency
-    const isTWDStock = asset.type === 'stock' && asset.symbol.endsWith('.TW')
+    // Adjust for Currency (includes both .TW and .TWO for Taiwan stocks)
+    const isTWDStock = asset.type === 'stock' && (asset.symbol.endsWith('.TW') || asset.symbol.endsWith('.TWO'))
 
     // Unit Price Display
     let displayUnitPrice = currentPriceRaw

@@ -29,7 +29,7 @@ export const AssetList: React.FC = () => {
         let value = rawPrice * asset.amount
 
         // Normalize to USD for filter/sort
-        if (asset.type === 'stock' && asset.symbol.endsWith('.TW') && !prices[asset.symbol]) {
+        if (asset.type === 'stock' && (asset.symbol.endsWith('.TW') || asset.symbol.endsWith('.TWO')) && !prices[asset.symbol]) {
             value /= exchangeRate
         }
         return { ...asset, valueUSD: value }
@@ -60,7 +60,7 @@ export const AssetList: React.FC = () => {
 
                     // Determine Raw Value in USD
                     let valueUSD = rawPrice * asset.amount
-                    if (asset.type === 'stock' && asset.symbol.endsWith('.TW')) {
+                    if (asset.type === 'stock' && (asset.symbol.endsWith('.TW') || asset.symbol.endsWith('.TWO'))) {
                         valueUSD = valueUSD / exchangeRate
                     }
 
@@ -79,7 +79,7 @@ export const AssetList: React.FC = () => {
                     if (asset.buyPrice) {
                         // Convert Buy Price to USD for uniform calc
                         let buyPriceUSD = asset.buyPrice
-                        if (asset.type === 'stock' && asset.symbol.endsWith('.TW')) {
+                        if (asset.type === 'stock' && (asset.symbol.endsWith('.TW') || asset.symbol.endsWith('.TWO'))) {
                             buyPriceUSD = asset.buyPrice / exchangeRate
                         }
 
@@ -116,7 +116,7 @@ export const AssetList: React.FC = () => {
                                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${asset.type === 'crypto' ? 'bg-orange-500/20 text-orange-400' : 'bg-blue-500/20 text-blue-400'
                                         }`}>
                                         {asset.type === 'crypto' ? <Bitcoin size={20} /> : (
-                                            asset.symbol.endsWith('.TW') ? (
+                                            (asset.symbol.endsWith('.TW') || asset.symbol.endsWith('.TWO')) ? (
                                                 <span className="text-xs font-bold">🇹🇼</span>
                                             ) : (
                                                 <span className="text-xs font-bold">🇺🇸</span>

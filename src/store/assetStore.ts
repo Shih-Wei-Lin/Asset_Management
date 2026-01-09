@@ -146,7 +146,7 @@ export const selectTotalValue = (state: AssetStore) => {
 
         // If it's a Taiwan stock (symbol ends with .TW), convert TWD to USD
         let valueUSD = price * asset.amount
-        if (asset.type === 'stock' && asset.symbol.endsWith('.TW')) {
+        if (asset.type === 'stock' && (asset.symbol.endsWith('.TW') || asset.symbol.endsWith('.TWO'))) {
             valueUSD = valueUSD / exchangeRate
         }
 

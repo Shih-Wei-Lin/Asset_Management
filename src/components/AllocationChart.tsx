@@ -19,7 +19,7 @@ export const AllocationChart: React.FC = () => {
         const rawPrice = (priceKey && prices[priceKey]) ? prices[priceKey] : (asset.buyPrice ?? 0)
 
         let valueUSD = rawPrice * asset.amount
-        if (asset.type === 'stock' && asset.symbol.endsWith('.TW')) {
+        if (asset.type === 'stock' && (asset.symbol.endsWith('.TW') || asset.symbol.endsWith('.TWO'))) {
             valueUSD = valueUSD / exchangeRate
         }
 
