@@ -2,9 +2,13 @@
 
 一個簡潔、美觀的個人資產追蹤應用程式，支援加密貨幣與股票的即時價格查詢。
 
+A clean, offline-first PWA for tracking personal assets with real-time crypto and stock prices. All data stays in your browser.
+
 [![Deploy to GitHub Pages](https://github.com/Shih-Wei-Lin/Asset_Management/actions/workflows/deploy.yml/badge.svg)](https://github.com/Shih-Wei-Lin/Asset_Management/actions/workflows/deploy.yml)
 
 **🌐 線上版本**: [https://shih-wei-lin.github.io/Asset_Management/](https://shih-wei-lin.github.io/Asset_Management/)
+**Live Demo**: [https://shih-wei-lin.github.io/Asset_Management/](https://shih-wei-lin.github.io/Asset_Management/)
+**English README**: [README.en.md](README.en.md)
 
 ---
 
@@ -97,6 +101,25 @@ src/
 | **圖示** | Lucide React |
 | **PWA** | vite-plugin-pwa |
 | **部署** | GitHub Pages + GitHub Actions |
+
+---
+
+## 程式架構與資安
+
+```
+使用者裝置 (瀏覽器/PWA)
+  ├─ React UI / Zustand 狀態
+  │   └─ LocalStorage (僅本機)
+  └─ Services (前端 API Client)
+      ├─ CoinGecko API
+      └─ Yahoo Finance API (經 corsproxy.io)
+```
+
+- 資產資料只保存在瀏覽器 LocalStorage，未加密，請避免存放敏感資訊。
+- 本專案無後端與帳號系統，資產資料不會上傳到伺服器。
+- API 呼叫為前端直連第三方服務，可能有速率限制或被記錄流量。
+- 股票資料透過 `corsproxy.io` 代理，若有資安疑慮可自建 proxy 或改用自建後端。
+- 部署時請使用 HTTPS，以降低中間人攻擊風險。
 
 ---
 

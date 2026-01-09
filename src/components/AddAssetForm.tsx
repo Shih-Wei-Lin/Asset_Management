@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useAssetStore, type AssetType } from '../store/assetStore'
 import { PlusCircle, X, Bitcoin, Briefcase, Search, Loader2 } from 'lucide-react'
 import { searchCoins, type CoinSearchResult } from '../services/coingecko'
+import { searchStocks, type StockSearchResult } from '../services/yahooFinance'
 
 interface AddAssetFormProps {
     onClose: () => void
@@ -18,21 +19,27 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
 
     // Search State
     const [searchQuery, setSearchQuery] = useState('')
-    const [searchResults, setSearchResults] = useState<CoinSearchResult[]>([])
+    const [searchResults, setSearchResults] = useState<(CoinSearchResult | StockSearchResult)[]>([])
     const [isSearching, setIsSearching] = useState(false)
     const [showResults, setShowResults] = useState(false)
 
     // Debounced Search
     useEffect(() => {
-        if (type !== 'crypto' || !searchQuery || searchQuery.length < 2) {
+        if (!searchQuery || searchQuery.length < 2) {
             setSearchResults([])
-            // Hide results if query is too short or not crypto
             return
         }
 
         const timer = setTimeout(async () => {
             setIsSearching(true)
-            const results = await searchCoins(searchQuery)
+            let results: any[] = []
+
+            if (type === 'crypto') {
+                results = await searchCoins(searchQuery)
+            } else {
+                results = await searchStocks(searchQuery)
+            }
+
             setSearchResults(results)
             setIsSearching(false)
             setShowResults(true)
@@ -41,10 +48,17 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
         return () => clearTimeout(timer)
     }, [searchQuery, type])
 
-    const selectCoin = (coin: CoinSearchResult) => {
-        setSymbol(coin.symbol.toUpperCase())
-        setApiId(coin.id)
-        setThumb(coin.thumb)
+    const selectAsset = (asset: CoinSearchResult | StockSearchResult) => {
+        setSymbol(asset.symbol.toUpperCase())
+
+        if (type === 'crypto' && 'id' in asset) {
+            setApiId(asset.id)
+            setThumb(asset.thumb)
+        } else {
+            setApiId(undefined)
+            setThumb(undefined)
+        }
+
         setSearchQuery('')
         setShowResults(false)
     }
@@ -53,35 +67,30 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
     const handleSymbolChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value
         setSymbol(value)
-
-        if (type === 'stock') {
-            // 4-6 digits or alphanumeric (e.g. 00875B) = Taiwan Stock
-            if (/^[0-9A-Za-z]{4,6}$/.test(value)) {
-                // You could add a visual indicator here if you had a state for it
-                // For now, we'll just handle the logic at submit or maybe render a badge?
-            }
-        }
     }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        // Symbol and Amount are required. Name is optional (defaults to symbol).
-        if (!symbol || !amount) return
+        console.log('Form submitting...', { symbol, amount, type })
+        if (!symbol || !amount) {
+            console.warn('Missing symbol or amount')
+            return
+        }
 
         let finalSymbol = symbol.toUpperCase()
 
-        // Auto-append suffix for Taiwan stocks
-        // If it's alphanumeric 4-6 chars (e.g. 2330, 00878, 00679B)
-        if (type === 'stock' && /^[0-9A-Z]{4,6}$/.test(finalSymbol)) {
+        // Auto-append suffix for Taiwan stocks ONLY if not already present
+        // If it's alphanumeric 4-6 chars (e.g. 2330, 00878) AND doesn't have a dot yet
+        if (type === 'stock' && /^[0-9A-Z]{4,6}$/.test(finalSymbol) && !finalSymbol.includes('.')) {
             // Heuristic: Bond ETFs (ending in 'B') are usually OTC (.TWO)
             // Others are usually Main Board (.TW)
+            // NOTE: Search results should be preferred as they include the suffix.
             if (finalSymbol.endsWith('B')) {
                 finalSymbol = `${finalSymbol}.TWO`
             } else {
                 finalSymbol = `${finalSymbol}.TW`
             }
         }
-
 
         addAsset({
             symbol: finalSymbol,
@@ -140,50 +149,62 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
                         </button>
                     </div>
 
-                    {/* Coin Search (Crypto Only) */}
-                    {type === 'crypto' && (
-                        <div className="relative z-20">
-                            <label className="block text-xs font-semibold text-indigo-200/50 uppercase tracking-wider mb-1.5 ml-1">搜尋幣種</label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    placeholder="輸入幣種名稱 (如 Bitcoin)"
-                                    className="glass-input pl-10"
-                                    onFocus={() => searchQuery.length >= 2 && searchResults.length > 0 && setShowResults(true)}
-                                    onBlur={() => setTimeout(() => setShowResults(false), 200)}
-                                />
-                                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
-                                    {isSearching ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
-                                </div>
+                    {/* Search Input (For Both Crypto and Stock) */}
+                    <div className="relative z-20">
+                        <label className="block text-xs font-semibold text-indigo-200/50 uppercase tracking-wider mb-1.5 ml-1">
+                            {type === 'crypto' ? '搜尋幣種' : '搜尋股票'}
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder={type === 'crypto' ? '輸入幣種名稱 (如 Bitcoin)' : '輸入股票代號或是名稱'}
+                                className="glass-input pl-10"
+                                onFocus={() => searchQuery.length >= 2 && searchResults.length > 0 && setShowResults(true)}
+                                onBlur={() => setTimeout(() => setShowResults(false), 200)}
+                            />
+                            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
+                                {isSearching ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
                             </div>
+                        </div>
 
-                            {/* Search Results Dropdown */}
-                            {showResults && searchResults.length > 0 && (
-                                <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1b26] border border-white/10 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-30">
-                                    {searchResults.map((coin) => (
+                        {/* Search Results Dropdown */}
+                        {showResults && searchResults.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1b26] border border-white/10 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-30">
+                                {searchResults.map((result) => {
+                                    const isCrypto = 'id' in result
+                                    const key = isCrypto ? result.id : result.symbol
+
+                                    return (
                                         <button
-                                            key={coin.id}
+                                            key={key}
                                             type="button"
-                                            onClick={() => selectCoin(coin)}
+                                            onClick={() => selectAsset(result)}
                                             className="w-full flex items-center gap-3 p-3 hover:bg-white/10 transition-colors text-left"
                                         >
-                                            <img src={coin.thumb} alt={coin.name} className="w-6 h-6 rounded-full" />
-                                            <div>
-                                                <p className="font-medium text-white">{coin.name}</p>
-                                                <p className="text-xs text-white/50">{coin.symbol}</p>
+                                            {isCrypto ? (
+                                                <img src={result.thumb} alt={result.name} className="w-6 h-6 rounded-full" />
+                                            ) : (
+                                                <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] text-blue-300">
+                                                    {result.exchDisp || 'STK'}
+                                                </div>
+                                            )}
+                                            <div className="min-w-0">
+                                                <p className="font-medium text-white truncate">{result.name}</p>
+                                                <p className="text-xs text-white/50 flex items-center gap-1">
+                                                    {result.symbol}
+                                                    {!isCrypto && <span className="px-1 py-0.5 rounded bg-white/5 text-[10px]">{result.exchDisp}</span>}
+                                                </p>
                                             </div>
                                         </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </div>
 
                     <div className="space-y-4">
-                        {/* Name Field Removed */}
-
                         <div>
                             <label className="block text-xs font-semibold text-indigo-200/50 uppercase tracking-wider mb-1.5 ml-1">代號</label>
                             <div className="relative">
@@ -198,7 +219,7 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
                                 {/* Market Indicator */}
                                 {type === 'stock' && symbol && (
                                     <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold px-2 py-1 rounded bg-white/10 text-white/60">
-                                        {/^[0-9A-Z]{4,6}$/.test(symbol.toUpperCase()) ? (symbol.toUpperCase().endsWith('B') ? '🇹🇼 債券/OTC' : '🇹🇼 台股') : /^[a-zA-Z]+$/.test(symbol) ? '🇺🇸 美股' : 'Unknown'}
+                                        {symbol.includes('.') ? (symbol.endsWith('.TWO') ? '🇹🇼 債券/OTC' : '🇹🇼 台股') : /^[0-9A-Z]{4,6}$/.test(symbol.toUpperCase()) ? (symbol.toUpperCase().endsWith('B') ? '🇹🇼 債券/OTC' : '🇹🇼 台股') : /^[a-zA-Z]+$/.test(symbol) ? '🇺🇸 美股' : 'Unknown'}
                                     </div>
                                 )}
                             </div>

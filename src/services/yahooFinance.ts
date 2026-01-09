@@ -149,3 +149,38 @@ export const getExchangeRate = async (): Promise<number> => {
         return cached ? cached.value : 32.5
     }
 }
+
+export interface StockSearchResult {
+    symbol: string
+    name: string
+    exch: string
+    type: string
+    exchDisp: string
+    typeDisp: string
+}
+
+export const searchStocks = async (query: string): Promise<StockSearchResult[]> => {
+    if (!query || query.length < 1) return []
+
+    try {
+        // Yahoo Finance Autocomplete API
+        const targetUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=10&newsCount=0`
+        const data = await fetchWithFallback(targetUrl)
+
+        if (!data || !data.quotes) return []
+
+        return data.quotes
+            .filter((quote: any) => quote.quoteType === 'EQUITY' || quote.quoteType === 'ETF')
+            .map((quote: any) => ({
+                symbol: quote.symbol,
+                name: quote.shortname || quote.longname || quote.symbol,
+                exch: quote.exchange,
+                type: quote.quoteType,
+                exchDisp: quote.exchDisp,
+                typeDisp: quote.typeDisp
+            }))
+    } catch (error) {
+        console.error('Error searching stocks:', error)
+        return []
+    }
+}

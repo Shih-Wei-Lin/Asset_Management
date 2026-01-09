@@ -7,7 +7,7 @@ import { formatCurrency } from '../utils/format'
 export const AssetList: React.FC = () => {
     const { assets, removeAsset, prices, preferredCurrency, exchangeRate, exchanges } = useAssetStore()
     const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
-    const [hideSmallBalances, setHideSmallBalances] = useState(true)
+    const [hideSmallBalances, setHideSmallBalances] = useState(false)
 
     if (assets.length === 0) {
         // ... (empty state same)
