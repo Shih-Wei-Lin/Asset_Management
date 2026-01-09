@@ -70,10 +70,16 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
 
         let finalSymbol = symbol.toUpperCase()
 
-        // Auto-append .TW for Taiwan stocks (4-6 chars, e.g. 2330, 00878, 00875B)
-        // Check if it's alphanumeric and looks like a TW stock code
+        // Auto-append suffix for Taiwan stocks
+        // If it's alphanumeric 4-6 chars (e.g. 2330, 00878, 00679B)
         if (type === 'stock' && /^[0-9A-Z]{4,6}$/.test(finalSymbol)) {
-            finalSymbol = `${finalSymbol}.TW`
+            // Heuristic: Bond ETFs (ending in 'B') are usually OTC (.TWO)
+            // Others are usually Main Board (.TW)
+            if (finalSymbol.endsWith('B')) {
+                finalSymbol = `${finalSymbol}.TWO`
+            } else {
+                finalSymbol = `${finalSymbol}.TW`
+            }
         }
 
 
@@ -192,7 +198,7 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
                                 {/* Market Indicator */}
                                 {type === 'stock' && symbol && (
                                     <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold px-2 py-1 rounded bg-white/10 text-white/60">
-                                        {/^[0-9A-Z]{4,6}$/.test(symbol.toUpperCase()) ? '🇹🇼 台股' : /^[a-zA-Z]+$/.test(symbol) ? '🇺🇸 美股' : 'Unknown'}
+                                        {/^[0-9A-Z]{4,6}$/.test(symbol.toUpperCase()) ? (symbol.toUpperCase().endsWith('B') ? '🇹🇼 債券/OTC' : '🇹🇼 台股') : /^[a-zA-Z]+$/.test(symbol) ? '🇺🇸 美股' : 'Unknown'}
                                     </div>
                                 )}
                             </div>
