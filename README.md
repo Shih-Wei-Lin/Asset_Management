@@ -7,7 +7,9 @@ A clean, offline-first PWA for tracking personal assets with real-time crypto an
 [![Deploy to GitHub Pages](https://github.com/Shih-Wei-Lin/Asset_Management/actions/workflows/deploy.yml/badge.svg)](https://github.com/Shih-Wei-Lin/Asset_Management/actions/workflows/deploy.yml)
 
 **🌐 線上版本**: [https://shih-wei-lin.github.io/Asset_Management/](https://shih-wei-lin.github.io/Asset_Management/)
+
 **Live Demo**: [https://shih-wei-lin.github.io/Asset_Management/](https://shih-wei-lin.github.io/Asset_Management/)
+
 **English README**: [README.en.md](README.en.md)
 
 ---
