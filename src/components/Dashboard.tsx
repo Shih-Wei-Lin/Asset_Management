@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Plus, Wallet, TrendingUp, RefreshCw, AlertCircle, Settings } from 'lucide-react'
 import { AddAssetForm } from './AddAssetForm'
 import { SettingsModal } from './SettingsModal'
@@ -8,6 +8,7 @@ import { AllocationChart } from './AllocationChart'
 import { useAssetStore, selectTotalValue } from '../store/assetStore'
 import { getPrices } from '../services/coingecko'
 import { getStockPrices, getExchangeRate } from '../services/yahooFinance'
+import { getPriceKey } from '../utils/symbolMap'
 
 
 export const Dashboard: React.FC = () => {
@@ -29,11 +30,14 @@ export const Dashboard: React.FC = () => {
     } = useAssetStore()
     const [isRefreshing, setIsRefreshing] = useState(false)
     const [chartRange, setChartRange] = useState<TimeRange>('1M')
+    const isFetchingRef = useRef(false)
 
     // Use selector for consistent total value calculation
     const displayValue = selectTotalValue({ assets, prices, exchangeRate, preferredCurrency, lastUpdated, error, addAsset: () => { }, removeAsset: () => { }, updateAsset: () => { }, setPrices: () => { }, setExchangeRate: () => { }, setPreferredCurrency: () => { }, setLastUpdated: () => { }, setError: () => { }, addExchange: () => { }, removeExchange: () => { }, syncExchanges: async () => { }, exchanges: [] })
 
-    const fetchPrices = async () => {
+    const fetchPrices = useCallback(async () => {
+        if (isFetchingRef.current) return
+        isFetchingRef.current = true
         setIsRefreshing(true)
         setError(null)
 
@@ -45,12 +49,16 @@ export const Dashboard: React.FC = () => {
             // 1. Sync Exchanges (New!)
             await syncExchanges()
 
-            // 2. Fetch Crypto Prices
-            const cryptoIds = assets
-                .filter(a => a.type === 'crypto' && a.apiId)
-                .map(a => a.apiId as string)
+            // 2. Fetch Crypto Prices - use getPriceKey for symbol fallback
+            const cryptoAssets = assets.filter(a => a.type === 'crypto')
+            const cryptoIds = new Set<string>()
 
-            const cryptoPrices = cryptoIds.length > 0 ? await getPrices(cryptoIds) : {}
+            for (const asset of cryptoAssets) {
+                const priceKey = getPriceKey(asset)
+                if (priceKey) cryptoIds.add(priceKey)
+            }
+
+            const cryptoPrices = cryptoIds.size > 0 ? await getPrices(Array.from(cryptoIds)) : {}
 
             // 3. Fetch Stock Prices
             const stockSymbols = assets
@@ -66,16 +74,17 @@ export const Dashboard: React.FC = () => {
             console.error('Failed to update prices:', err)
             setError('Failed to update prices. Using cached data.')
         } finally {
+            isFetchingRef.current = false
             setIsRefreshing(false)
         }
-    }
+    }, [assets, setError, setExchangeRate, setLastUpdated, setPrices, syncExchanges])
 
     // Initial fetch and periodic update (every 60s)
     useEffect(() => {
         fetchPrices()
         const interval = setInterval(fetchPrices, 60000)
         return () => clearInterval(interval)
-    }, []) // Removed assets.length dependency to prevent loops
+    }, [fetchPrices])
 
     const [chartDataSummary, setChartDataSummary] = useState<{ start: number, end: number } | null>(null)
 

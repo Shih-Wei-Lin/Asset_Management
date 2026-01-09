@@ -5,6 +5,7 @@
 
 const PROXY_URL = 'https://frosty-block-56bd.sean7115.workers.dev/?'
 const OKX_BASE_URL = 'https://www.okx.com'
+const ENABLE_OKX_DEBUG = false
 
 export interface OKXCredentials {
     apiKey: string
@@ -81,8 +82,10 @@ async function okxRequest<T>(
     // Use corsproxy.io - it should forward headers correctly
     const url = PROXY_URL + encodeURIComponent(OKX_BASE_URL + path)
 
-    console.log('[OKX API] Request:', { path, timestamp, method })
-    console.log('[OKX API] URL (proxied):', url)
+    if (ENABLE_OKX_DEBUG) {
+        console.log('[OKX API] Request:', { path, timestamp, method })
+        console.log('[OKX API] URL (proxied):', url)
+    }
 
     const response = await fetch(url, {
         method,
@@ -90,7 +93,9 @@ async function okxRequest<T>(
         body: method === 'POST' && body ? body : undefined,
     })
 
-    console.log('[OKX API] Response status:', response.status)
+    if (ENABLE_OKX_DEBUG) {
+        console.log('[OKX API] Response status:', response.status)
+    }
 
     if (!response.ok) {
         const errorText = await response.text()
@@ -99,7 +104,9 @@ async function okxRequest<T>(
     }
 
     const data = await response.json()
-    console.log('[OKX API] Response data:', data)
+    if (ENABLE_OKX_DEBUG) {
+        console.log('[OKX API] Response data:', data)
+    }
 
     if (data.code !== '0') {
         throw new Error(`OKX API error: ${data.msg || data.code}`)
@@ -293,6 +300,7 @@ export async function getOKXTickers(credentials: OKXCredentials): Promise<OKXTic
  * Debug function to inspect all assets
  */
 export async function debugOKXAssets(credentials: OKXCredentials): Promise<void> {
+    if (!ENABLE_OKX_DEBUG) return
     console.log('--- DEBUGGING OKX ASSETS ---')
 
     try {

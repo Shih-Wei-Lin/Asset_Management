@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useAssetStore, type Asset } from '../store/assetStore'
 import { AssetDetailModal } from './AssetDetailModal'
 import { Trash2, TrendingUp, TrendingDown, Bitcoin, Activity, Link2 } from 'lucide-react'
 import { formatCurrency } from '../utils/format'
+import { getPriceKey } from '../utils/symbolMap'
 
 export const AssetList: React.FC = () => {
     const { assets, removeAsset, prices, preferredCurrency, exchangeRate, exchanges } = useAssetStore()
@@ -35,19 +36,22 @@ export const AssetList: React.FC = () => {
         )
     }
 
-    const filteredAssets = assets.map(asset => {
-        const priceKey = asset.type === 'crypto' ? asset.apiId : asset.symbol
-        const rawPrice = (priceKey && prices[priceKey]) ? prices[priceKey] : (asset.buyPrice || 0)
-        let value = rawPrice * asset.amount
+    const filteredAssets = useMemo(() => (
+        assets.map((asset) => {
+            const priceKey = getPriceKey(asset)
+            const rawPrice = (priceKey && prices[priceKey]) ? prices[priceKey] : (asset.buyPrice || 0)
+            let valueUSD = rawPrice * asset.amount
 
-        // Normalize to USD for filter/sort
-        if (asset.type === 'stock' && (asset.symbol.endsWith('.TW') || asset.symbol.endsWith('.TWO')) && !prices[asset.symbol]) {
-            value /= exchangeRate
-        }
-        return { ...asset, valueUSD: value }
-    })
-        .filter(item => !hideSmallBalances || item.valueUSD >= 0.01)
-        .sort((a, b) => b.valueUSD - a.valueUSD)
+            // Normalize to USD for filter/sort
+            if (asset.type === 'stock' && (asset.symbol.endsWith('.TW') || asset.symbol.endsWith('.TWO'))) {
+                valueUSD /= exchangeRate
+            }
+
+            return { ...asset, valueUSD }
+        })
+            .filter(item => !hideSmallBalances || item.valueUSD >= 0.01)
+            .sort((a, b) => b.valueUSD - a.valueUSD)
+    ), [assets, prices, exchangeRate, hideSmallBalances])
 
     return (
         <>
@@ -65,7 +69,7 @@ export const AssetList: React.FC = () => {
 
             <div className="space-y-3 pb-8">
                 {filteredAssets.map((asset) => {
-                    const priceKey = asset.type === 'crypto' ? asset.apiId : asset.symbol
+                    const priceKey = getPriceKey(asset)
                     const rawPrice = (priceKey && prices[priceKey])
                         ? prices[priceKey]
                         : (asset.buyPrice ?? 0)
@@ -88,7 +92,7 @@ export const AssetList: React.FC = () => {
                     let profit = 0
                     let profitPercent = 0
 
-                    if (asset.buyPrice) {
+                    if (asset.buyPrice !== undefined) {
                         // Convert Buy Price to USD for uniform calc
                         let buyPriceUSD = asset.buyPrice
                         if (asset.type === 'stock' && (asset.symbol.endsWith('.TW') || asset.symbol.endsWith('.TWO'))) {
@@ -96,10 +100,12 @@ export const AssetList: React.FC = () => {
                         }
 
                         const totalBuyUSD = buyPriceUSD * asset.amount
-                        const diffUSD = valueUSD - totalBuyUSD
+                        if (totalBuyUSD > 0) {
+                            const diffUSD = valueUSD - totalBuyUSD
 
-                        profit = preferredCurrency === 'USD' ? diffUSD : diffUSD * exchangeRate
-                        profitPercent = (diffUSD / totalBuyUSD) * 100
+                            profit = preferredCurrency === 'USD' ? diffUSD : diffUSD * exchangeRate
+                            profitPercent = (diffUSD / totalBuyUSD) * 100
+                        }
                     }
 
                     return (

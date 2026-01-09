@@ -71,13 +71,28 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        console.log('Form submitting...', { symbol, amount, type })
         if (!symbol || !amount) {
             console.warn('Missing symbol or amount')
             return
         }
 
-        let finalSymbol = symbol.toUpperCase()
+        const parsedAmount = Number.parseFloat(amount)
+        if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+            alert('Please enter a valid quantity.')
+            return
+        }
+
+        let parsedBuyPrice: number | undefined
+        if (buyPrice.trim() !== '') {
+            const parsed = Number.parseFloat(buyPrice)
+            if (!Number.isFinite(parsed) || parsed < 0) {
+                alert('Please enter a valid buy price.')
+                return
+            }
+            parsedBuyPrice = parsed
+        }
+
+        let finalSymbol = symbol.trim().toUpperCase()
 
         // Auto-append suffix for Taiwan stocks ONLY if not already present
         // If it's alphanumeric 4-6 chars (e.g. 2330, 00878) AND doesn't have a dot yet
@@ -95,8 +110,8 @@ export const AddAssetForm: React.FC<AddAssetFormProps> = ({ onClose }) => {
         addAsset({
             symbol: finalSymbol,
             type,
-            amount: parseFloat(amount),
-            buyPrice: buyPrice ? parseFloat(buyPrice) : undefined,
+            amount: parsedAmount,
+            buyPrice: parsedBuyPrice,
             apiId: type === 'crypto' ? apiId : undefined,
             thumb: type === 'crypto' ? thumb : undefined
         })
